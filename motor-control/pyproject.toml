@@ -1,0 +1,24 @@
+[project]
+name = "motor_control"
+version = "0.1.0"
+authors = [
+    { name="Trevor Vannoy"},
+]
+description = "A helper package for controlling drone motors and obtaining RPM telemetry using the MultiWii Serial Protocol"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "yamspy@git+https://github.com/BMW-lab-MSU/YAMSPy/#egg=dev",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
