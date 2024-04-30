@@ -40,3 +40,7 @@ avg_rpm = parent_conn.recv()
 
 rpm_collection_process.join()
 ```
+
+## Installation
+
+Install the package using `pip install .` in this directory.
