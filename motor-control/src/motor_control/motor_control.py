@@ -17,7 +17,7 @@ Typical usage example:
     rpm_collection_process = Process(target=motor_control.collect_rpm_data, args=(event, child_conn))
 
     motor_control.connect("/dev/ttyACM0")
-    motor_control.set_throttle(1500,1500,1500,1500)
+    motor_control.set_throttle([1500,1500,1500,1500])
     motor_control.throw_out_old_telemetry()
 
     rpm_collection_process.start()
@@ -72,20 +72,55 @@ def connect(serial_port):
     board = MSPy(serial_port)
     board.connect()
 
-def set_throttle(throttle1, throttle2, throttle3, throttle4):
+def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """Set motor throttle.
 
     Motor throttle values for MSP are between 1000 (0%) and 2000 (100%).
 
     Args:
-        throttle1: Throttle value for motor 1.
-        throttle2: Throttle value for motor 2.
-        throttle3: Throttle value for motor 3.
-        throttle4: Throttle value for motor 4.
+        throttle:
+            An iterable of the throttle values for the motors. Must have a
+            length of 4.
+        ramp_time:
+            Ramp motors to their final throttle values over this time. Defaults
+            to None, which means no ramp time.
+        ramp_interval:
+            The interval, in seconds, at which the motor throttle values are
+            updated during the ramp time. Defaults to 0.1 seconds.
     """
     global board
 
-    board.send_RAW_MOTORS([throttle1, throttle2, throttle3, throttle4, 0, 0, 0, 0])
+    ZERO_PCT_THROTTLE = 1000
+
+    final_throttle = throttle
+
+    if ramp_time:
+        n_steps = round(ramp_time / ramp_interval)
+
+        intermediate_throttle = np.ndarray(shape=(4, n_steps))
+
+        intermediate_throttle[0,:] = np.linspace(ZERO_PCT_THROTTLE,
+            final_throttle[0], n_steps, dtype=np.uint)
+        intermediate_throttle[1,:] = np.linspace(ZERO_PCT_THROTTLE,
+            final_throttle[1], n_steps, dtype=np.uint)
+        intermediate_throttle[2,:] = np.linspace(ZERO_PCT_THROTTLE,
+            final_throttle[2], n_steps, dtype=np.uint)
+        intermediate_throttle[3,:] = np.linspace(ZERO_PCT_THROTTLE,
+            final_throttle[3], n_steps, dtype=np.uint)
+
+        for i in range(n_steps):
+            print(intermediate_throttle[:,i])
+            board.send_RAW_MOTORS([
+                intermediate_throttle[0,i], intermediate_throttle[1,i],
+                intermediate_throttle[2,i], intermediate_throttle[3,i],
+                0, 0, 0, 0])
+
+            sleep(ramp_interval)
+
+    else:
+        board.send_RAW_MOTORS(
+            [final_throttle[0], final_throttle[1], final_throttle[2],
+            final_throttle[3], 0, 0, 0, 0])
 
 def collect_rpm_data(event, pipe):
     """Collect RPM telemetry data in the background.
