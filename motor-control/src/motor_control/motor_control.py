@@ -47,6 +47,7 @@ from yamspy.msp_codes import MSPCodes
 # fine since the only internal state we need is the MSPy board object.
 board = None
 
+
 def get_rpm_telemetry():
     """Get RPM telemetry values from the ESC.
 
@@ -55,11 +56,12 @@ def get_rpm_telemetry():
     """
     global board
 
-    board.send_RAW_msg(MSPCodes['MSP_MOTOR_TELEMETRY'])
+    board.send_RAW_msg(MSPCodes["MSP_MOTOR_TELEMETRY"])
     recv = board.receive_msg()
     board.process_recv_data(recv)
 
-    return np.array(board.MOTOR_TELEMETRY_DATA['rpm'][0:4])
+    return np.array(board.MOTOR_TELEMETRY_DATA["rpm"][0:4])
+
 
 def connect(serial_port):
     """Connect to the drone's FC.
@@ -71,6 +73,7 @@ def connect(serial_port):
 
     board = MSPy(serial_port)
     board.connect()
+
 
 def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """Set motor throttle.
@@ -99,28 +102,50 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
 
         intermediate_throttle = np.ndarray(shape=(4, n_steps))
 
-        intermediate_throttle[0,:] = np.linspace(ZERO_PCT_THROTTLE,
-            final_throttle[0], n_steps, dtype=np.uint)
-        intermediate_throttle[1,:] = np.linspace(ZERO_PCT_THROTTLE,
-            final_throttle[1], n_steps, dtype=np.uint)
-        intermediate_throttle[2,:] = np.linspace(ZERO_PCT_THROTTLE,
-            final_throttle[2], n_steps, dtype=np.uint)
-        intermediate_throttle[3,:] = np.linspace(ZERO_PCT_THROTTLE,
-            final_throttle[3], n_steps, dtype=np.uint)
+        intermediate_throttle[0, :] = np.linspace(
+            ZERO_PCT_THROTTLE, final_throttle[0], n_steps, dtype=np.uint
+        )
+        intermediate_throttle[1, :] = np.linspace(
+            ZERO_PCT_THROTTLE, final_throttle[1], n_steps, dtype=np.uint
+        )
+        intermediate_throttle[2, :] = np.linspace(
+            ZERO_PCT_THROTTLE, final_throttle[2], n_steps, dtype=np.uint
+        )
+        intermediate_throttle[3, :] = np.linspace(
+            ZERO_PCT_THROTTLE, final_throttle[3], n_steps, dtype=np.uint
+        )
 
         for i in range(n_steps):
-            print(intermediate_throttle[:,i])
-            board.send_RAW_MOTORS([
-                intermediate_throttle[0,i], intermediate_throttle[1,i],
-                intermediate_throttle[2,i], intermediate_throttle[3,i],
-                0, 0, 0, 0])
+            print(intermediate_throttle[:, i])
+            board.send_RAW_MOTORS(
+                [
+                    intermediate_throttle[0, i],
+                    intermediate_throttle[1, i],
+                    intermediate_throttle[2, i],
+                    intermediate_throttle[3, i],
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            )
 
             sleep(ramp_interval)
 
     else:
         board.send_RAW_MOTORS(
-            [final_throttle[0], final_throttle[1], final_throttle[2],
-            final_throttle[3], 0, 0, 0, 0])
+            [
+                final_throttle[0],
+                final_throttle[1],
+                final_throttle[2],
+                final_throttle[3],
+                0,
+                0,
+                0,
+                0,
+            ]
+        )
+
 
 def collect_rpm_data(event, pipe):
     """Collect RPM telemetry data in the background.
@@ -139,7 +164,7 @@ def collect_rpm_data(event, pipe):
     # Set the sampling period so we don't overload the serial port or ESC.
     # NOTE: YAMSPy's maximum serial send rate is 1/100 seconds, so we could
     # make this sampling rate a little faster.
-    RPM_SAMPLING_PERIOD = 0.1 # seconds
+    RPM_SAMPLING_PERIOD = 0.1  # seconds
 
     num_telemetry_packets = 0
     rpm = np.zeros((4,))
@@ -161,6 +186,7 @@ def collect_rpm_data(event, pipe):
     # executes one thread at a time.
     pipe.send(avg_rpm)
 
+
 def throw_out_old_telemetry():
     """Read outdated telemetry values.
 
@@ -170,5 +196,5 @@ def throw_out_old_telemetry():
     has been enough to flush the outdated telemetry packets.
     """
 
-    for i in range(0,10):
+    for i in range(0, 10):
         get_rpm_telemetry()
