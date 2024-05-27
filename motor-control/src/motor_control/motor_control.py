@@ -154,6 +154,10 @@ def collect_rpm_data(event, pipe):
     designed to run in the background as a separate process while the main
     process is doing something else. At this time, only the multiprocessing
     module is supported.
+    
+    The average and standard deviation of the RPM values are sent over the
+    pipe as a tuple: (avg_rpm, rpm_std_dev). The caller must receive these
+    values on its pipe.
 
     Args:
         event:
@@ -166,25 +170,36 @@ def collect_rpm_data(event, pipe):
     # make this sampling rate a little faster.
     RPM_SAMPLING_PERIOD = 0.1  # seconds
 
-    num_telemetry_packets = 0
-    rpm = np.zeros((4,))
+    # This buffer length lets us collect up to 1000 seconds of rpm data, which
+    # is 16.66 minutes. We don't envision a scenario where we collect more than
+    # a handful of seconds of rpm data at a time, but we might as well
+    # over-allocate the array to be safe.
+    RPM_BUFFER_LENGTH = 10_000
+
+    N_MOTORS = 4
+
+    rpm = np.empty((N_MOTORS, RPM_BUFFER_LENGTH))
+
+    n_telemetry_packets = 0
+    packet_idx = 0
 
     event.wait()
     while event.is_set():
-        rpm += get_rpm_telemetry()
-        num_telemetry_packets += 1
+        rpm[:,packet_idx] = get_rpm_telemetry()
+        packet_idx += 1
+        n_telemetry_packets += 1
 
         sleep(RPM_SAMPLING_PERIOD)
 
-    # Average the rpm values
-    avg_rpm = rpm / num_telemetry_packets
+    avg_rpm = np.mean(rpm[:,0:n_telemetry_packets], axis=1)
+    rpm_std_dev = np.std(rpm[:,0:n_telemetry_packets], axis=1)
 
     # NOTE: Using a pipe makes this only work with the multiprocessing module,
     # but using a queue would make it work with threading and multiprocessing
     # having to make any changes. Since we are sleeping in order to not overload
     # the ESC or serial port, threading would work fine even though threading only
     # executes one thread at a time.
-    pipe.send(avg_rpm)
+    pipe.send((avg_rpm, rpm_std_dev))
 
 
 def throw_out_old_telemetry():
