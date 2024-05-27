@@ -166,15 +166,14 @@ def collect_rpm_data(event, pipe):
             multiprocessing.Pipe used to return the average RPM to the caller.
     """
     # Set the sampling period so we don't overload the serial port or ESC.
-    # NOTE: YAMSPy's maximum serial send rate is 1/100 seconds, so we could
-    # make this sampling rate a little faster.
-    RPM_SAMPLING_PERIOD = 0.1  # seconds
+    # NOTE: YAMSPy's maximum serial send rate is 1/100 seconds
+    RPM_SAMPLING_PERIOD = 0.01  # seconds
 
     # This buffer length lets us collect up to 1000 seconds of rpm data, which
     # is 16.66 minutes. We don't envision a scenario where we collect more than
     # a handful of seconds of rpm data at a time, but we might as well
     # over-allocate the array to be safe.
-    RPM_BUFFER_LENGTH = 10_000
+    RPM_BUFFER_LENGTH = 100_000
 
     N_MOTORS = 4
 
