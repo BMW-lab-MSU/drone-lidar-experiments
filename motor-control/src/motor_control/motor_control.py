@@ -46,6 +46,7 @@ from yamspy.msp_codes import MSPCodes
 # This module could have been a class, but using a module-level global seemed
 # fine since the only internal state we need is the MSPy board object.
 board = None
+current_throttle = [1000, 1000, 1000, 1000]
 
 
 def get_rpm_telemetry():
@@ -74,22 +75,6 @@ def connect(serial_port):
     board = MSPy(serial_port)
     board.connect()
 
-# NOTE: if this method doesn't work, I can just save the throttle values that I
-# set in set_throttle as global variables.
-def get_throttle():
-    """Get current motor throttle values from the flight controller.
-
-    Returns:
-        throttle: Array of throttle values.
-    """
-    global board
-
-    board.send_RAW_msg(MSPCodes["MSP_MOTOR"])
-    recv = board.receive_msg()
-    board.process_rec_data(recv)
-
-    return board.MOTOR_DATA[0:4]
-
 
 def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """Set motor throttle.
@@ -108,8 +93,9 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
             updated during the ramp time. Defaults to 0.1 seconds.
     """
     global board
+    global current_throttle
 
-    starting_throttle = get_throttle()
+    starting_throttle = current_throttle
 
     final_throttle = throttle
 
@@ -161,6 +147,8 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
                 0,
             ]
         )
+    
+    current_throttle = final_throttle
 
 
 def collect_rpm_data(collect_rpm, run_main_loop, pipe):
