@@ -46,7 +46,7 @@ from yamspy.msp_codes import MSPCodes
 # This module could have been a class, but using a module-level global seemed
 # fine since the only internal state we need is the MSPy board object.
 board = None
-current_throttle = [1000, 1000, 1000, 1000]
+current_throttle = [0, 0, 0, 0]
 
 
 def get_rpm_telemetry():
@@ -79,7 +79,7 @@ def connect(serial_port):
 def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """Set motor throttle.
 
-    Motor throttle values for MSP are between 1000 (0%) and 2000 (100%).
+    Motor throttle values are between 0 and 100, with a resolution of 0.1.
 
     Args:
         throttle:
@@ -95,9 +95,9 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     global board
     global current_throttle
 
-    starting_throttle = current_throttle
+    starting_throttle = _convert_pct_throttle_to_msp(current_throttle)
 
-    final_throttle = throttle
+    final_throttle = _convert_pct_throttle_to_msp(throttle)
 
     if ramp_time:
         n_steps = round(ramp_time / ramp_interval)
@@ -147,8 +147,8 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
                 0,
             ]
         )
-    
-    current_throttle = final_throttle
+
+    current_throttle = throttle
 
 
 def collect_rpm_data(collect_rpm, run_main_loop, pipe):
@@ -158,7 +158,7 @@ def collect_rpm_data(collect_rpm, run_main_loop, pipe):
     designed to run in the background as a separate process while the main
     process is doing something else. At this time, only the multiprocessing
     module is supported.
-    
+
     The average and standard deviation of the RPM values are sent over the
     pipe as a tuple: (avg_rpm, rpm_std_dev). The caller must receive these
     values on its pipe.
@@ -222,3 +222,29 @@ def throw_out_old_telemetry():
 
     for i in range(0, 10):
         get_rpm_telemetry()
+
+
+def _convert_throttle_pct_to_msp(throttle_pct):
+    """Convert from percent throttle to MSP throttle values.
+
+    The MultiWii Serial Protocol expects throttle values that range from
+    1000 to 2000, with 1000 being 0% throttle and 2000 being 100%. Using
+    percentages is easier to understand, thus the motor control API uses them.
+
+    Args:
+        throttle_pct:
+            Iterable of throttle percentages to be converted. Maximum
+            resolution is 0.1, e.g., 50.3.
+
+    Returns:
+        throttle_msp:
+            List of throttle values in MSP format.
+
+    """
+    MULTIPLIER = 10
+    OFFSET = 1000
+
+    # MSP throttle values must be integers.
+    throttle_msp = [int(pct * MULTIPLIER + OFFSET) for pct in throttle_pct]
+
+    return throttle_msp
