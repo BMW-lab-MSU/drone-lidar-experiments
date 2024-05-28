@@ -74,6 +74,22 @@ def connect(serial_port):
     board = MSPy(serial_port)
     board.connect()
 
+# NOTE: if this method doesn't work, I can just save the throttle values that I
+# set in set_throttle as global variables.
+def get_throttle():
+    """Get current motor throttle values from the flight controller.
+
+    Returns:
+        throttle: Array of throttle values.
+    """
+    global board
+
+    board.send_RAW_msg(MSPCodes["MSP_MOTOR"])
+    recv = board.receive_msg()
+    board.process_rec_data(recv)
+
+    return board.MOTOR_DATA[0:4]
+
 
 def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """Set motor throttle.
@@ -93,7 +109,7 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     """
     global board
 
-    ZERO_PCT_THROTTLE = 1000
+    starting_throttle = get_throttle()
 
     final_throttle = throttle
 
@@ -103,16 +119,16 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
         intermediate_throttle = np.ndarray(shape=(4, n_steps))
 
         intermediate_throttle[0, :] = np.linspace(
-            ZERO_PCT_THROTTLE, final_throttle[0], n_steps, dtype=np.uint
+            starting_throttle[0], final_throttle[0], n_steps, dtype=np.uint
         )
         intermediate_throttle[1, :] = np.linspace(
-            ZERO_PCT_THROTTLE, final_throttle[1], n_steps, dtype=np.uint
+            starting_throttle[1], final_throttle[1], n_steps, dtype=np.uint
         )
         intermediate_throttle[2, :] = np.linspace(
-            ZERO_PCT_THROTTLE, final_throttle[2], n_steps, dtype=np.uint
+            starting_throttle[2], final_throttle[2], n_steps, dtype=np.uint
         )
         intermediate_throttle[3, :] = np.linspace(
-            ZERO_PCT_THROTTLE, final_throttle[3], n_steps, dtype=np.uint
+            starting_throttle[3], final_throttle[3], n_steps, dtype=np.uint
         )
 
         for i in range(n_steps):
@@ -147,7 +163,7 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
         )
 
 
-def collect_rpm_data(event, pipe):
+def collect_rpm_data(collect_rpm, run_main_loop, pipe):
     """Collect RPM telemetry data in the background.
 
     Collects RPM telemetry from the FC/ESC every ~0.1 seconds. This method is
@@ -160,8 +176,10 @@ def collect_rpm_data(event, pipe):
     values on its pipe.
 
     Args:
-        event:
-            multiprocessing.Event used to control when rpm collection starts.
+        collect_rpm:
+            multiprocessing.Event used to control when rpm telemetry is collected.
+        run_main_loop:
+            multiprocessing.Event used to signal when the process should run.
         pipe:
             multiprocessing.Pipe used to return the average RPM to the caller.
     """
@@ -177,28 +195,32 @@ def collect_rpm_data(event, pipe):
 
     N_MOTORS = 4
 
-    rpm = np.empty((N_MOTORS, RPM_BUFFER_LENGTH))
 
-    n_telemetry_packets = 0
-    packet_idx = 0
+    run_main_loop.wait()
+    while run_main_loop.is_set():
 
-    event.wait()
-    while event.is_set():
-        rpm[:,packet_idx] = get_rpm_telemetry()
-        packet_idx += 1
-        n_telemetry_packets += 1
+        rpm = np.empty((N_MOTORS, RPM_BUFFER_LENGTH))
 
-        sleep(RPM_SAMPLING_PERIOD)
+        n_telemetry_packets = 0
+        packet_idx = 0
 
-    avg_rpm = np.mean(rpm[:,0:n_telemetry_packets], axis=1)
-    rpm_std_dev = np.std(rpm[:,0:n_telemetry_packets], axis=1)
+        collect_rpm.wait()
+        while collect_rpm.is_set():
+            rpm[:,packet_idx] = get_rpm_telemetry()
+            packet_idx += 1
+            n_telemetry_packets += 1
 
-    # NOTE: Using a pipe makes this only work with the multiprocessing module,
-    # but using a queue would make it work with threading and multiprocessing
-    # having to make any changes. Since we are sleeping in order to not overload
-    # the ESC or serial port, threading would work fine even though threading only
-    # executes one thread at a time.
-    pipe.send((avg_rpm, rpm_std_dev))
+            sleep(RPM_SAMPLING_PERIOD)
+
+        avg_rpm = np.mean(rpm[:,0:n_telemetry_packets], axis=1)
+        rpm_std_dev = np.std(rpm[:,0:n_telemetry_packets], axis=1)
+
+        # NOTE: Using a pipe makes this only work with the multiprocessing module,
+        # but using a queue would make it work with threading and multiprocessing
+        # having to make any changes. Since we are sleeping in order to not overload
+        # the ESC or serial port, threading would work fine even though threading only
+        # executes one thread at a time.
+        pipe.send((avg_rpm, rpm_std_dev))
 
 
 def throw_out_old_telemetry():
