@@ -84,7 +84,8 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     Args:
         throttle:
             An iterable of the throttle values for the motors. Must have a
-            length of 4.
+            length of 4. When looking at the front of the drone, the motor
+            order is [back left, front left, back right, front right].
         ramp_time:
             Ramp motors to their final throttle values over this time. Defaults
             to None, which means no ramp time.
