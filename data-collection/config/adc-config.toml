@@ -1,0 +1,77 @@
+# This configuration file somewhat follows the INI configuration used by the Gage
+# SDK examples. We remove some configuration options that aren't needed or
+# possible, and we change some settings. The Gage SDK has three separate
+# configuration sections that can be set: acquisition, channel, and trigger; thus
+# we use those sections in this config, even though the INI files from the SDK
+# examples use slightly different sections. For instance, we don't support an
+# [Application] section like the official INI examples do, as there is no need.
+
+[trigger]
+# Trigger on rising edge. Supported values are:
+# Rising edge: "rising","r","positive","p",1
+# Falling edge: "falling","f","negative","n",0
+condition = "falling"
+
+# Set trigger level to 50%
+level = -10
+
+# External trigger input range isn't supported on the CSE161G2 model
+
+# Default options that should not be changed for the insect lidar since we
+# have to use the external trigger
+# Supported values: "external", 1 (for channel 1), 2 (for channel 2)
+source = 1
+
+
+[acquisition]
+# Acquisition mode can be:
+# - "single", 1
+# - "dual", 2
+# - "quad", 4
+# - "oct", 8
+mode = "dual"
+
+# For supported sample rates, see the Gage RazorMax Express datasheet.
+# We are using the CSE161G2 model, which has a max sample rate of 1 GS/s.
+sample_rate = 1e9 # 1 GS/s
+
+# The number of samples to acquire per pulse / trigger event.
+# This might as well always be a power of 2, as that should be more efficient
+# for the hardware (I'm not convinced that the SDK really supports arbitrary
+# sample depths, anyway).
+# We have no reason to acquire pre-trigger data, thus n_samples covers
+# both the "Depth" and "SegmentSize" options in the official INI config. Setting
+# these to the same value results in no pre-trigger data being captured.
+
+# 256 samples is approximately 38 meters. We want to set the drone at about 20 meters,
+# so this should work fine.
+n_samples = 256
+
+# Trigger delay can be used to delay data acquisition by a number of samples
+# after the trigger event. This might be useful if the first handful of samples
+# occur before the light has even left the instrument
+trigger_delay = 0
+
+# The number of sequential pulses to acquire. Values greater than 1 result in a
+# "multiple record acquisition", as it's referred to in the Gage documentation.
+# This parameter corresponds to the "SegmentCount" config option in the official
+# INI files
+segment_count = 1024
+
+[channel]
+channel = 2
+
+# Voltage range of the input channel, in mV. The ADC's full input range is +/- 1 V,
+# so we use the full range, which is 2000 mV.
+range = 2000
+
+# The DC offset is programmable and can span the full scale input range.
+# TODO: determine if there having a DC offset is useful; if the PMT truly can't
+# output positive current/voltage values, then we could add a -1000 mV offset to
+# make then input range -2 V to 0 V
+dc_offset = 0
+
+# The input channels have 50 Ohm input impedance, and are DC-coupled. Since
+# these options are not software-selectable, we don't support those options,
+# even though the Gage SDK supports them.
+
