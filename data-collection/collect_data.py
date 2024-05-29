@@ -348,7 +348,7 @@ def main(
     rpm_collection.join()
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -384,13 +384,15 @@ if __name__ == "main":
         help="Filename prefix for the data files.",
     )
 
+    args = parser.parse_args()
+
     sys.exit(
         main(
-            experiment_spreadsheet_path,
-            data_dir,
-            digitizer_config,
-            range_calibration_config,
-            serial_port_config,
-            filename_prefix,
+            args.experiment_spreadsheet_path,
+            args.data_dir,
+            args.digitizer_config,
+            args.range_calibration_config,
+            args.serial_port_config,
+            args.filename_prefix,
         )
     )
