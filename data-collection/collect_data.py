@@ -274,7 +274,7 @@ def main(
     n_segments = digitizer.acquisition_config.SegmentCount
 
     # Spawn and start the process that collects rpm data from the drone.
-    rpm_collection.start()
+    collect_rpm.start()
 
     # Tell the rpm collection process that it can run its main loop. The
     # process will won't collect any rpm data until collect_rpm is set.
@@ -308,7 +308,7 @@ def main(
         for image_num in range(n_images):
 
             # Tell the process to start collecting rpm telemetry
-            rpm_collection_flag.set()
+            collect_rpm.set()
 
             # Collect the lidar data
             (
@@ -318,7 +318,7 @@ def main(
             ) = digitizer.capture()
 
             # We're done collecting data, so stop collecting rpm telemetry
-            rpm_collection_flag.clear()
+            collect_rpm.clear()
 
             # Get the average rpm values
             (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
@@ -362,7 +362,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--digitizer-config",
         type=str,
-        default="./config/adc-config.toml",
+        default="./config/digitizer.toml",
         help="Path to the digitizer configuration file. Default: ./config/adc-config.toml",
     )
     parser.add_argument(
@@ -388,8 +388,8 @@ if __name__ == "__main__":
 
     sys.exit(
         main(
-            args.experiment_spreadsheet_path,
-            args.data_dir,
+            args.experiment_spreadsheet,
+            args.data_directory,
             args.digitizer_config,
             args.range_calibration_config,
             args.serial_port_config,
