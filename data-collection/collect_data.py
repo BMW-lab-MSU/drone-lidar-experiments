@@ -360,7 +360,7 @@ def main(
     experiment_active.clear()
 
     # Stop the rpm collection process
-    rpm_collection.join()
+    collect_rpm.join()
 
 
 if __name__ == "__main__":
