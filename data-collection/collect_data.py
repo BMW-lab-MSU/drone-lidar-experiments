@@ -288,7 +288,7 @@ def main(
     experiment_active.set()
 
     for idx, params in experiment_params.iterrows():
-        if is_manual_adjusted_needed(experiment_params, idx):
+        if is_manual_adjustment_needed(experiment_params, idx):
             answer = "n"
             while answer.lower() != y:
                 answer = input(
