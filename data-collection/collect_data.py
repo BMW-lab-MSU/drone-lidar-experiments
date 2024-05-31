@@ -207,7 +207,7 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
     return prop_frequency
 
 
-def create_h5_filename(experiment_params, idx):
+def create_h5_filename(experiment_params, idx, filename_prefix):
     tilt_angle = f"tilt-{experiment_params.iloc[idx]['tilt angle']}"
 
     throttle_fr = ""
@@ -225,8 +225,11 @@ def create_h5_filename(experiment_params, idx):
 
     timestamp = f"-{time.strftime('%H-%M-%S')}"
 
+    if filename_prefix is None:
+        filename_prefix = ""
+
     filename = (
-        tilt_angle + throttle_fr + throttle_fl + throttle_br + throttle_bl + timestamp
+        filename_prefix + tilt_angle + throttle_fr + throttle_fl + throttle_br + throttle_bl + timestamp
     )
 
     return filename
@@ -361,7 +364,7 @@ def main(
             distance = None
 
         # Save the data, ground-truth, and metadata in an h5 file
-        h5_filename = create_h5_filename(experiment_params, idx)
+        h5_filename = create_h5_filename(experiment_params, idx, filename_prefix)
 
         save_h5_file(
             h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, use_volts, distance
