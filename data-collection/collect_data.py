@@ -231,6 +231,18 @@ def create_h5_filename(experiment_params, idx):
 
     return filename
 
+def prompt_for_lens_tube_distance():
+    is_lens_tube_distance_valid = False
+    while not is_lens_tube_distance_valid:
+        lens_tube_distance = input(
+            "Enter the lens tube's extension distance"
+        )
+        if isinstance(lens_tube_distance, (float, int)):
+            is_lens_tube_distance_valid = True
+        else:
+            print("Invalid lens tube distance. Please enter a number")
+
+    return lens_tube_distance
 
 def save_h5_file(
     h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, is_data_in_volts, distance
@@ -268,10 +280,6 @@ def main(
     # Read in ground-truth / experiment parameter spreadsheet so we have the
     # experiment parameters we need, i.e., motor speed, tilt angle, etc.
 
-    # TODO: prompt for how far away the drone is? probably not; we can just save manually enter that in the spreadsheet.
-
-    # TODO: prompt for distance between lenses when the fill factor changes
-
     # Get the image size that the digitizer is collecting so we can preallocate
     # matrices later for saving the data.
     n_samples = digitizer.acquisition_config.SegmentSize
@@ -288,8 +296,18 @@ def main(
     # we could make a new process for every image, that would not be efficient.
     experiment_active.set()
 
+
+    lens_tube_distance = prompt_for_lens_tube_distance()            
+
     for idx, params in experiment_params.iterrows():
+
+        experiment_params.iloc[idx]["lens tube extension distance"] = lens_tube_distance
+
         if is_manual_adjustment_needed(experiment_params, idx):
+
+            lens_tube_distance = prompt_for_lens_tube_distance()            
+            experiment_params.iloc[idx]["lens tube extension distance"] = lens_tube_distance
+
             answer = "n"
             while answer.lower() != y:
                 answer = input(
