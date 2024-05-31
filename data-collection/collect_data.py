@@ -4,6 +4,7 @@ import tomllib
 import argparse
 import pandas as pd
 import time
+import h5py
 
 import motor_control
 from quickset_pan_tilt import controller, protocol
@@ -233,7 +234,11 @@ def create_h5_filename(experiment_params, idx):
 def save_h5_file(
     h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, is_data_in_volts, distance
 ):
-    pass
+    with h5py.File(h5_filename, "w") as h5file:
+        digitizer.save_data_in_h5(h5file, data, timestamps, capture_time, is_data_in_volts, distance)
+
+
+
 
 
 def main(
