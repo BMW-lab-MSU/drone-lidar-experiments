@@ -11,9 +11,6 @@ import wingbeat_lidar
 
 # TODO: take in range calibration file. make it optional, though.
 
-# TODO: add std dev columns to spreadsheets.
-
-
 # Initialize digitizer
 def setup_digitizer(config_file="./config/adc-config.toml"):
     digitizer = wingbeat_lidar.digitizer.Digitizer(config_file)
@@ -234,7 +231,7 @@ def create_h5_filename(experiment_params, idx):
 
 
 def save_h5_file(
-    h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer
+    h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, is_data_in_volts, distance
 ):
     pass
 
@@ -246,6 +243,7 @@ def main(
     range_calibration_config,
     serial_port_config,
     filename_prefix,
+    use_volts,
 ):
     N_MOTORS = 4
 
@@ -326,11 +324,14 @@ def main(
         # Put the ground-truth rpm data into the dataframe
         save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm)
 
+        if use_volts:
+            data = digitizer.convert_to_volts(data)
+
         # Save the data, ground-truth, and metadata in an h5 file
         h5_filename = create_h5_filename(experiment_params, idx)
 
         save_h5_file(
-            h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer
+            h5_filename, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, use_volts, distance
         )
 
         # Put the data filename in the ground-truth dataframe
@@ -383,8 +384,15 @@ if __name__ == "__main__":
         default=None,
         help="Filename prefix for the data files.",
     )
+    parser.add_argument(
+        "--use-volts",
+        action="store_true",
+        help="Save the data in volts instead of raw ADC counts",
+    )
 
     args = parser.parse_args()
+
+    # TODO: argument validation
 
     sys.exit(
         main(
@@ -394,5 +402,6 @@ if __name__ == "__main__":
             args.range_calibration_config,
             args.serial_port_config,
             args.filename_prefix,
+            args.use_volts,
         )
     )
