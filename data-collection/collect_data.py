@@ -39,7 +39,7 @@ def setup_drone_controller(port):
     experiment_active = multiprocessing.Event()
     rpm_recv_pipe, rpm_send_pipe = multiprocessing.Pipe(False)
     rpm_collection_process = multiprocessing.Process(
-        target=motor_control.collect_rpm_data, args=(stop_rpm_collection, rpm_send_pipe)
+        target=motor_control.collect_rpm_data, args=(collect_rpm, experiment_active, rpm_send_pipe)
     )
 
     motor_control.connect(port)
