@@ -270,7 +270,7 @@ def main(
 
     experiment_params = pd.read_excel(experiment_spreadsheet_path)
 
-    pan_tilt_port, drone_port = load_port_configuration()
+    pan_tilt_port, drone_port = load_port_configuration(serial_port_config)
 
     pan_tilt = setup_pan_tilt_controller(pan_tilt_port)
 
@@ -278,7 +278,7 @@ def main(
         setup_drone_controller(drone_port)
     )
 
-    digitizer = setup_digitizer()
+    digitizer = setup_digitizer(digitizer_config)
 
     # Read in ground-truth / experiment parameter spreadsheet so we have the
     # experiment parameters we need, i.e., motor speed, tilt angle, etc.
