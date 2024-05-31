@@ -110,7 +110,7 @@ def set_tilt_angle(pan_tilt, experiment_params, idx):
         if tilt_angle_changed:
             pan_tilt.move_absolute(0, current_params["tilt angle"])
     else:
-        pan_tilt.move_absolute(0, params["tilt angle"])
+        pan_tilt.move_absolute(0, experiment_params["tilt angle"])
 
 
 def set_throttle(experiment_params, idx):
@@ -214,13 +214,13 @@ def create_h5_filename(experiment_params, idx):
     throttle_fl = ""
     throttle_br = ""
     throttle_bl = ""
-    if isinstance(throttle_front_right, int):
+    if isinstance(experiment_params.iloc['throttle front right'], int):
         throttle_fr = f"-fr-{experiment_params.iloc['throttle front right']}"
-    if isinstance(throttle_front_left, int):
+    if isinstance(experiment_params.iloc['throttle front left'], int):
         throttle_fl = f"-fl-{experiment_params.iloc['throttle front left']}"
-    if isinstance(throttle_back_right, int):
+    if isinstance(experiment_params.iloc['throttle back right'], int):
         throttle_br = f"-br-{experiment_params.iloc['throttle back right']}"
-    if isinstance(throttle_back_left, int):
+    if isinstance(experiment_params.iloc['throttle back left'], int):
         throttle_bl = f"-bl-{experiment_params.iloc['throttle back left']}"
 
     timestamp = f"-{time.strftime('%H-%M-%S')}"
