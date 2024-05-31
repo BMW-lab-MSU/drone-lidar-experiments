@@ -5,6 +5,7 @@ import argparse
 import pandas as pd
 import time
 import h5py
+import numpy as np
 
 import motor_control
 from quickset_pan_tilt import controller, protocol
