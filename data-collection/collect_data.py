@@ -12,8 +12,6 @@ import motor_control
 from quickset_pan_tilt import controller, protocol
 import wingbeat_lidar as lidar
 
-# TODO: take in range calibration file. make it optional, though.
-
 # Initialize digitizer
 def setup_digitizer(config_file="./config/adc-config.toml"):
     digitizer = lidar.digitizer.Digitizer(config_file)
