@@ -332,6 +332,15 @@ def main(
         if use_volts:
             data = digitizer.convert_to_volts(data)
 
+        # If a range calibration file was given, convert range bins into meters
+        if range_calibration_config:
+            lidar.range_calibration.load_configuration(range_calibration_config)
+
+            range_bins = np.arange(n_samples)
+            distance = lidar.range_calibration.compute_range(range_bins)
+        else:
+            distance = None
+
         # Save the data, ground-truth, and metadata in an h5 file
         h5_filename = create_h5_filename(experiment_params, idx)
 
