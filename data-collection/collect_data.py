@@ -278,7 +278,7 @@ def main(
     n_segments = digitizer.acquisition_config.SegmentCount
 
     # Spawn and start the process that collects rpm data from the drone.
-    collect_rpm.start()
+    rpm_collection_process.start()
 
     # Tell the rpm collection process that it can run its main loop. The
     # process will won't collect any rpm data until collect_rpm is set.
@@ -361,7 +361,7 @@ def main(
     experiment_active.clear()
 
     # Stop the rpm collection process
-    collect_rpm.join()
+    rpm_collection_process.join()
 
 
 if __name__ == "__main__":
