@@ -267,7 +267,7 @@ def save_h5_file(
 ):
     os.makedirs(data_dir, exist_ok=True)
 
-    with h5py.File(data_dir + os.pathsep + h5_filename, "w") as h5file:
+    with h5py.File(data_dir + os.sep + h5_filename + ".hdf5", "w") as h5file:
         digitizer.save_data_in_h5(h5file, data, timestamps, capture_time, is_data_in_volts, distance)
 
         h5file.create_group("parameters/motor_rpm/front_right")
