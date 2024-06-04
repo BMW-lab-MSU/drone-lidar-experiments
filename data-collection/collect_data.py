@@ -235,13 +235,15 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
     if isinstance(experiment_params.at[idx, 'throttle back left'], int):
         throttle_bl = f"-bl-{experiment_params.at[idx, 'throttle back left']}"
 
-    timestamp = f"-{time.strftime('%H-%M-%S')}"
+    timestamp = f"{time.strftime('%H-%M-%S')}"
 
     if filename_prefix is None:
         filename_prefix = ""
+    else:
+        filename_prefix = filename_prefix + "-"
 
     filename = (
-        filename_prefix + tilt_angle + throttle_fr + throttle_fl + throttle_br + throttle_bl + timestamp
+        filename_prefix + timestamp + tilt_angle + throttle_fr + throttle_fl + throttle_br + throttle_bl
     )
 
     return filename
