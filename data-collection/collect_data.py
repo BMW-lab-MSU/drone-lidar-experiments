@@ -100,21 +100,6 @@ def is_manual_adjustment_needed(experiment_params, idx):
         return False
 
 
-def set_tilt_angle(pan_tilt, experiment_params, idx):
-    # XXX: This function probably isn't necessary. We could just move every time,
-    # even if the tilt angle hasn't changed. The pan tilt mount will just ack
-    # the command and then not move.
-    if idx > 0:
-        current_params = experiment_params.iloc[idx]
-        past_params = experiment_params.iloc[idx - 1]
-
-        tilt_angle_changed = current_params["tilt angle"] != past_params["tilt angle"]
-        if tilt_angle_changed:
-            pan_tilt.move_absolute(0, current_params["tilt angle"])
-    else:
-        pan_tilt.move_absolute(0, experiment_params["tilt angle"])
-
-
 def set_throttle(experiment_params, idx):
     # Make the motors ramp to the new rpm value over 5 seconds. This seems like
     # a safe value that won't cause any super crazy current spikes, but the
