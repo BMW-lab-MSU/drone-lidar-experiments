@@ -121,10 +121,10 @@ def set_throttle(experiment_params, idx):
     # value is ultimately arbitrary.
     RAMP_TIME = 5
 
-    front_left_throttle = experiment_params.iloc[idx]["throttle front left"]
-    front_right_throttle = experiment_params.iloc[idx]["throttle front right"]
-    back_left_throttle = experiment_params.iloc[idx]["throttle back left"]
-    back_right_throttle = experiment_params.iloc[idx]["throttle back right"]
+    front_left_throttle = np.nan_to_num(experiment_params.at[idx, "throttle front left"])
+    front_right_throttle = np.nan_to_num(experiment_params.at[idx, "throttle front right"])
+    back_left_throttle = np.nan_to_num(experiment_params.at[idx, "throttle back left"])
+    back_right_throttle = np.nan_to_num(experiment_params.at[idx, "throttle back right"])
 
     motor_control.set_throttle(
         [
