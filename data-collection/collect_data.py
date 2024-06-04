@@ -342,7 +342,7 @@ def main(
 ):
     N_MOTORS = 4
 
-    experiment_params = pd.read_excel(experiment_spreadsheet_path)
+    experiment_params = pd.read_excel(experiment_spreadsheet_path, dtype=object)
 
     pan_tilt_port, drone_port = load_port_configuration(serial_port_config)
 
