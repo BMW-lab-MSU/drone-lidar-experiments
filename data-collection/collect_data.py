@@ -252,11 +252,12 @@ def prompt_for_lens_tube_distance():
     is_lens_tube_distance_valid = False
     while not is_lens_tube_distance_valid:
         lens_tube_distance = input(
-            "Enter the lens tube's extension distance"
+            "Enter the lens tube's extension distance: "
         )
-        if isinstance(lens_tube_distance, (float, int)):
+        try:
+            lens_tube_distance = float(lens_tube_distance)
             is_lens_tube_distance_valid = True
-        else:
+        except:
             print("Invalid lens tube distance. Please enter a number")
 
     return lens_tube_distance
