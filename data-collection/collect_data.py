@@ -52,9 +52,9 @@ def setup_drone_controller(port):
 
 def load_port_configuration(config_file="./config/serial-ports.toml"):
     with open(config_file, "rb") as f:
-        config = tomllib.load()
+        config = tomllib.load(f)
 
-    return config.pan_tilt_port, config.drone_port
+    return config["pan_tilt_port"], config["drone_port"]
 
 
 def is_manual_adjustment_needed(experiment_params, idx):
