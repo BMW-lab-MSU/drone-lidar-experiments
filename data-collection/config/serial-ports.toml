@@ -1,4 +1,4 @@
 # Serial port configuration. Check which port the pan tilt mount and drone are
 # on, then change those settings here. The code will read these settings.
-pan_tilt_port = "/dev/ttyUSB0"
+pan_tilt_port = "/dev/ttyUSB1"
 drone_port = "/dev/ttyACM0"
