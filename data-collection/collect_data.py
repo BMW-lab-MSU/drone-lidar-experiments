@@ -205,6 +205,15 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
 
     return prop_frequency
 
+def set_tilt_angle(pan_tilt, experiment_params, idx):
+    # Check for faults and clear any that exist
+    hard_faults, soft_faults = pan_tilt.check_for_faults(pan_tilt.get_status())
+    # print(hard_faults)
+    if hard_faults:
+        pan_tilt.fault_reset()
+
+    print(experiment_params.at[idx, "tilt angle"])
+    pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
 
 def create_h5_filename(experiment_params, idx, filename_prefix):
     tilt_angle = f"tilt-{experiment_params.iloc[idx]['tilt angle']}"
