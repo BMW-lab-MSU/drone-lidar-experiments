@@ -225,7 +225,7 @@ def throw_out_old_telemetry():
         get_rpm_telemetry()
 
 
-def _convert_throttle_pct_to_msp(throttle_pct):
+def _convert_pct_throttle_to_msp(throttle_pct):
     """Convert from percent throttle to MSP throttle values.
 
     The MultiWii Serial Protocol expects throttle values that range from
