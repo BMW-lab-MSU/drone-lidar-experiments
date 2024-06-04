@@ -7,6 +7,7 @@ import time
 import h5py
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 import motor_control
 from quickset_pan_tilt import controller, protocol
@@ -138,40 +139,40 @@ def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
     """
     
     """
-    experiment_params.iloc[idx]["motor rpm front right"] = avg_rpm[:, 3]
-    experiment_params.iloc[idx]["motor rpm front left"] = avg_rpm[:, 1]
-    experiment_params.iloc[idx]["motor rpm back right"] = avg_rpm[:, 2]
-    experiment_params.iloc[idx]["motor rpm back left"] = avg_rpm[:, 0]
+    experiment_params.at[idx, "motor rpm front right"] = str(avg_rpm[:, 3])
+    experiment_params.at[idx, "motor rpm front left"] = avg_rpm[:, 1]
+    experiment_params.at[idx, "motor rpm back right"] = avg_rpm[:, 2]
+    experiment_params.at[idx, "motor rpm back left"] = avg_rpm[:, 0]
 
-    experiment_params.iloc[idx]["motor rpm front right std dev"] = std_dev_rpm[:, 3]
-    experiment_params.iloc[idx]["motor rpm front left std dev"] = std_dev_rpm[:, 1]
-    experiment_params.iloc[idx]["motor rpm back right std dev"] = std_dev_rpm[:, 2]
-    experiment_params.iloc[idx]["motor rpm back left std dev"] = std_dev_rpm[:, 0]
+    experiment_params.at[idx, "motor rpm front right std dev"] = std_dev_rpm[:, 3]
+    experiment_params.at[idx, "motor rpm front left std dev"] = std_dev_rpm[:, 1]
+    experiment_params.at[idx, "motor rpm back right std dev"] = std_dev_rpm[:, 2]
+    experiment_params.at[idx, "motor rpm back left std dev"] = std_dev_rpm[:, 0]
 
-    experiment_params.iloc[idx]["prop frequency front right"] = _compute_prop_frequency(
-        avg_rpm[:, 3]
+    experiment_params.at[idx, "prop frequency front right"] = _compute_prop_frequency(
+        avg_rpm[:, 3], experiment_params, idx
     )
-    experiment_params.iloc[idx]["prop frequency front left"] = _compute_prop_frequency(
-        avg_rpm[:, 1]
+    experiment_params.at[idx, "prop frequency front left"] = _compute_prop_frequency(
+        avg_rpm[:, 1], experiment_params, idx
     )
-    experiment_params.iloc[idx]["prop frequency back right"] = _compute_prop_frequency(
-        avg_rpm[:, 2]
+    experiment_params.at[idx, "prop frequency back right"] = _compute_prop_frequency(
+        avg_rpm[:, 2], experiment_params, idx
     )
-    experiment_params.iloc[idx]["prop frequency back left"] = _compute_prop_frequency(
-        avg_rpm[:, 0]
+    experiment_params.at[idx, "prop frequency back left"] = _compute_prop_frequency(
+        avg_rpm[:, 0], experiment_params, idx
     )
 
-    experiment_params.iloc[idx]["prop frequency front right std dev"] = (
-        _compute_prop_frequency(std_dev_rpm[:, 3])
+    experiment_params.at[idx, "prop frequency front right std dev"] = (
+        _compute_prop_frequency(std_dev_rpm[:, 3], experiment_params, idx)
     )
-    experiment_params.iloc[idx]["prop frequency front left std dev"] = (
-        _compute_prop_frequency(std_dev_rpm[:, 1])
+    experiment_params.at[idx, "prop frequency front left std dev"] = (
+        _compute_prop_frequency(std_dev_rpm[:, 1], experiment_params, idx)
     )
-    experiment_params.iloc[idx]["prop frequency back right std dev"] = (
-        _compute_prop_frequency(std_dev_rpm[:, 2])
+    experiment_params.at[idx, "prop frequency back right std dev"] = (
+        _compute_prop_frequency(std_dev_rpm[:, 2], experiment_params, idx)
     )
-    experiment_params.iloc[idx]["prop frequency back left std dev"] = (
-        _compute_prop_frequency(std_dev_rpm[:, 0])
+    experiment_params.at[idx, "prop frequency back left std dev"] = (
+        _compute_prop_frequency(std_dev_rpm[:, 0], experiment_params, idx)
     )
 
 
@@ -196,7 +197,7 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
 
         idx:
     """
-    n_blades = experiment_params.iloc[idx]["# blades"]
+    n_blades = experiment_params.at[idx, "# blades"]
 
     # Conversion for revolutions per minute to revolutions per second
     RPM_TO_HZ = 1 / 60
@@ -216,20 +217,20 @@ def set_tilt_angle(pan_tilt, experiment_params, idx):
     pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
 
 def create_h5_filename(experiment_params, idx, filename_prefix):
-    tilt_angle = f"tilt-{experiment_params.iloc[idx]['tilt angle']}"
+    tilt_angle = f"tilt-{experiment_params.at[idx, 'tilt angle']}"
 
     throttle_fr = ""
     throttle_fl = ""
     throttle_br = ""
     throttle_bl = ""
-    if isinstance(experiment_params.iloc['throttle front right'], int):
-        throttle_fr = f"-fr-{experiment_params.iloc['throttle front right']}"
-    if isinstance(experiment_params.iloc['throttle front left'], int):
-        throttle_fl = f"-fl-{experiment_params.iloc['throttle front left']}"
-    if isinstance(experiment_params.iloc['throttle back right'], int):
-        throttle_br = f"-br-{experiment_params.iloc['throttle back right']}"
-    if isinstance(experiment_params.iloc['throttle back left'], int):
-        throttle_bl = f"-bl-{experiment_params.iloc['throttle back left']}"
+    if isinstance(experiment_params.at[idx, 'throttle front right'], int):
+        throttle_fr = f"-fr-{experiment_params.at[idx, 'throttle front right']}"
+    if isinstance(experiment_params.at[idx, 'throttle front left'], int):
+        throttle_fl = f"-fl-{experiment_params.at[idx, 'throttle front left']}"
+    if isinstance(experiment_params.at[idx, 'throttle back right'], int):
+        throttle_br = f"-br-{experiment_params.at[idx, 'throttle back right']}"
+    if isinstance(experiment_params.at[idx, 'throttle back left'], int):
+        throttle_bl = f"-bl-{experiment_params.at[idx, 'throttle back left']}"
 
     timestamp = f"-{time.strftime('%H-%M-%S')}"
 
@@ -282,35 +283,46 @@ def save_h5_file(
         h5file.create_group("parameters/prop_frequency/back_right")
         h5file.create_group("parameters/prop_frequency/back_left")
 
-        h5file["parameters/prop_frequency/front_right/avg"] = _compute_prop_frequency(avg_rpm[:,3])
-        h5file["parameters/prop_frequency/front_right/std_dev"] =_compute_prop_frequency(rpm_std_dev[:,3])
-        h5file["parameters/prop_frequency/front_left/avg"] = _compute_prop_frequency(avg_rpm[:,1])
-        h5file["parameters/prop_frequency/front_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,1])
-        h5file["parameters/prop_frequency/back_right/avg"] = _compute_prop_frequency(avg_rpm[:,2])
-        h5file["parameters/prop_frequency/back_right/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,2])
-        h5file["parameters/prop_frequency/back_left/avg"] = _compute_prop_frequency(avg_rpm[:,0])
-        h5file["parameters/prop_frequency/back_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,0])
+        h5file["parameters/prop_frequency/front_right/avg"] = _compute_prop_frequency(avg_rpm[:,3], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_right/std_dev"] =_compute_prop_frequency(rpm_std_dev[:,3], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_left/avg"] = _compute_prop_frequency(avg_rpm[:,1], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,1], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_right/avg"] = _compute_prop_frequency(avg_rpm[:,2], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_right/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,2], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_left/avg"] = _compute_prop_frequency(avg_rpm[:,0], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,0], experiment_params, idx)
 
-        h5file.create_gorup("parameters/throttle")
+        h5file.create_group("parameters/throttle")
 
-        throttle_fr = experiment_params.iloc[idx]["throttle front right"]
-        throttle_fl = experiment_params.iloc[idx]["throttle front left"]
-        throttle_br = experiment_params.iloc[idx]["throttle back right"]
-        throttle_bl = experiment_params.iloc[idx]["throttle back left"]
+        throttle_fr = experiment_params.at[idx, "throttle front right"]
+        throttle_fl = experiment_params.at[idx, "throttle front left"]
+        throttle_br = experiment_params.at[idx, "throttle back right"]
+        throttle_bl = experiment_params.at[idx, "throttle back left"]
         h5file["parameters/throttle/front_right"] = throttle_fr
         h5file["parameters/throttle/front_left"] = throttle_fl
         h5file["parameters/throttle/back_right"] = throttle_br
         h5file["parameters/throttle/back_left"] = throttle_bl
 
-        h5file["parameters/tilt"] = experiment_params.iloc[idx]["tilt angle"]
-        h5file["parameters/motor_configuration"] = experiment_params.iloc[idx]["motor configuration"]
-        h5file["parameters/prop_size"] = experiment_params.iloc[idx]["prop size"]
-        h5file["parameters/n_blades"] = experiment_params.iloc[idx]["# blades"]
-        h5file["parameters/fill_factor"] = experiment_params.iloc[idx]["fill factor"]
-        h5file["parameters/lens_tube_extension"] = experiment_params.iloc[idx]["lens tube extension distance"]
-        h5file["parameters/target_distance"] = experiment_params.iloc[idx]["distance"]
+        h5file["parameters/tilt"] = experiment_params.at[idx, "tilt angle"]
+        h5file["parameters/motor_configuration"] = experiment_params.at[idx, "motor configuration"]
+        h5file["parameters/prop_size"] = experiment_params.at[idx, "prop size"]
+        h5file["parameters/n_blades"] = experiment_params.at[idx, "# blades"]
+        h5file["parameters/fill_factor"] = experiment_params.at[idx, "fill factor"]
+        h5file["parameters/lens_tube_extension"] = experiment_params.at[idx, "lens tube extension distance"]
+        h5file["parameters/target_distance"] = experiment_params.at[idx, "distance (m)"]
 
+def save_png(data, timestamps, filename, data_dir):
+    plt.pcolormesh(data)
 
+    plt.xticks(ticks=range(0,len(timestamps),256),labels=np.round(timestamps[0:2048:256]/1e6,1),rotation=45)
+    plt.xlabel('time (ms)')
+
+    # Invert the y axis so the top-left is (0,0), which is how we like to view the images
+    # because that's how MATLAB does it :)
+    # plt.gca().invert_yaxis()
+    plt.ylabel('range bin')
+
+    plt.savefig(data_dir + os.sep + filename + '.png')
 
 
 def main(
