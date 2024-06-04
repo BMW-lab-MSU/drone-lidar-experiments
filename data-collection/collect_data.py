@@ -436,12 +436,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "experiment-spreadsheet",
+        "experiment_spreadsheet",
         type=str,
         help="Path to the experiment parameters spreadsheet",
     )
     parser.add_argument(
-        "data-directory", type=str, help="Path to the top-level data directory"
+        "data_directory", type=str, help="Path to the top-level data directory"
     )
     parser.add_argument(
         "--digitizer-config",
