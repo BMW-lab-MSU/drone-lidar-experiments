@@ -11,11 +11,13 @@ import matplotlib.pyplot as plt
 
 import motor_control
 from quickset_pan_tilt import controller, protocol
-import wingbeat_lidar as lidar
+# import wingbeat_lidar as lidar
+from wingbeat_lidar.digitizer import Digitizer
+import wingbeat_lidar.range_calibration as rangecal
 
 # Initialize digitizer
 def setup_digitizer(config_file="./config/adc-config.toml"):
-    digitizer = lidar.digitizer.Digitizer(config_file)
+    digitizer = Digitizer(config_file)
     digitizer.initialize()
     digitizer.configure()
 
