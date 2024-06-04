@@ -349,87 +349,114 @@ def main(
 
     lens_tube_distance = prompt_for_lens_tube_distance()            
 
-    for idx, params in experiment_params.iterrows():
+    try:
+        for idx, params in experiment_params.iterrows():
 
-        experiment_params.iloc[idx]["lens tube extension distance"] = lens_tube_distance
+            experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
 
-        if is_manual_adjustment_needed(experiment_params, idx):
+            if is_manual_adjustment_needed(experiment_params, idx):
 
-            lens_tube_distance = prompt_for_lens_tube_distance()            
-            experiment_params.iloc[idx]["lens tube extension distance"] = lens_tube_distance
+                lens_tube_distance = prompt_for_lens_tube_distance()            
+                experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
 
-            answer = "n"
-            while answer.lower() != y:
-                answer = input(
-                    'Press "y" when you are ready to run the next configuration'
-                )
+                answer = "n"
+                while answer.lower() != "y":
+                    answer = input(
+                        'Press "y" when you are ready to run the next configuration: '
+                    )
 
-        set_tilt_angle(pan_tilt, experiment_params, idx)
+            print("---------------------------------")
+            print("setting tilt angle")
+            print("---------------------------------")
+            # pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
+            set_tilt_angle(pan_tilt, experiment_params, idx)
 
-        set_throttle(experiment_params, idx)
+            motor_control.connect(drone_port)
+            print("---------------------------------")
+            print("setting throttle")
+            print("---------------------------------")
+            set_throttle(experiment_params, idx)
 
-        n_images = experiment_params.iloc[idx]["# images"]
+            n_images = int(experiment_params.at[idx, "# images"])
 
-        data = np.empty((n_images, n_samples, n_segments))
-        timestamps = np.empty(shape=(n_images, n_segments))
-        capture_time = np.empty(shape=n_images, dtype=np.bytes_)
+            data = np.empty((n_images, n_samples, n_segments))
+            timestamps = np.empty(shape=(n_images, n_segments))
+            capture_time = np.empty(shape=n_images, dtype=np.bytes_)
 
-        avg_rpm = np.empty((n_images, N_MOTORS))
-        std_dev_rpm = np.empty((n_images, N_MOTORS))
+            avg_rpm = np.empty((n_images, N_MOTORS))
+            std_dev_rpm = np.empty((n_images, N_MOTORS))
 
-        for image_num in range(n_images):
 
-            # Tell the process to start collecting rpm telemetry
-            collect_rpm.set()
+            print("---------------------------------")
+            print("collecting data")
+            print("---------------------------------")
+            for image_num in range(n_images):
+                print(image_num)
 
-            # Collect the lidar data
-            (
-                data[image_num, :, :],
-                timestamps[image_num, :],
-                capture_time[image_num],
-            ) = digitizer.capture()
+                # Tell the process to start collecting rpm telemetry
+                collect_rpm.set()
 
-            # We're done collecting data, so stop collecting rpm telemetry
-            collect_rpm.clear()
+                # Collect the lidar data
+                (
+                    data[image_num, :, :],
+                    timestamps[image_num, :],
+                    capture_time[image_num],
+                ) = digitizer.capture()
 
-            # Get the average rpm values
-            (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
+                # We're done collecting data, so stop collecting rpm telemetry
+                collect_rpm.clear()
 
-        # Put the ground-truth rpm data into the dataframe
-        save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm)
+                # Get the average rpm values
+                (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
+                # print(avg_rpm[image_num,:])
+                # print(std_dev_rpm[image_num,:])
 
-        if use_volts:
-            data = digitizer.convert_to_volts(data)
 
-        # If a range calibration file was given, convert range bins into meters
-        if range_calibration_config:
-            lidar.range_calibration.load_configuration(range_calibration_config)
+            # Put the ground-truth rpm data into the dataframe
 
-            range_bins = np.arange(n_samples)
-            distance = lidar.range_calibration.compute_range(range_bins)
-        else:
-            distance = None
+            save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm)
 
-        # Save the data, ground-truth, and metadata in an h5 file
-        h5_filename = create_h5_filename(experiment_params, idx, filename_prefix)
+            if use_volts:
+                data = digitizer.convert_to_volts(data)
 
-        save_h5_file(
-            h5_filename, data_dir, experiment_params, idx, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, use_volts, distance
-        )
+            # If a range calibration file was given, convert range bins into meters
+            if range_calibration_config:
+                rangecal.load_configuration(range_calibration_config)
 
-        # Put the data filename in the ground-truth dataframe
-        experiment_params.iloc[idx]["filename"] = h5_filename
+                range_bins = np.arange(n_samples)
+                distance = rangecal.compute_range(range_bins)
+            else:
+                distance = None
 
-        # Save the spreadsheet just in case something in the experiment blows
-        # up causing us to kill this code midway through the experiments.
+            # Save the data, ground-truth, and metadata in an h5 file
+            h5_filename = create_h5_filename(experiment_params, idx, filename_prefix)
+
+            save_h5_file(
+                h5_filename, data_dir, experiment_params, idx, data, timestamps, capture_time, avg_rpm, std_dev_rpm, digitizer, use_volts, distance
+            )
+
+            save_png(data[15,:,:], timestamps[15,:], h5_filename, data_dir)
+
+            # Put the data filename in the ground-truth dataframe
+            experiment_params.at[idx, "filename"] = h5_filename
+
+            # Save the spreadsheet just in case something in the experiment blows
+            # up causing us to kill this code midway through the experiments.
+            experiment_params.to_excel(experiment_spreadsheet_path)
+
+        # The experiment is over; tell the rpm collection process that it can
+        # terminate itself.
+        experiment_active.clear()
+
+        # Stop the rpm collection process
+        # rpm_collection_process.join()
+    except KeyboardInterrupt:
+        # save spreadsheet
         experiment_params.to_excel(experiment_spreadsheet_path)
 
-    # The experiment is over; tell the rpm collection process that it can
-    # terminate itself.
-    experiment_active.clear()
+        pan_tilt.home()
 
-    # Stop the rpm collection process
-    rpm_collection_process.join()
+        motor_control.set_throttle([0,0,0,0], ramp_time=5)
 
 
 if __name__ == "__main__":
