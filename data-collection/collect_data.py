@@ -319,12 +319,22 @@ def main(
 
     pan_tilt_port, drone_port = load_port_configuration(serial_port_config)
 
+    print("---------------------------------")
+    print("setting up pan tilt mount...")
+    print("---------------------------------")
     pan_tilt = setup_pan_tilt_controller(pan_tilt_port)
 
+
+    print("---------------------------------")
+    print("setting up drone motor control...")
+    print("---------------------------------")
     collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process = (
         setup_drone_controller(drone_port)
     )
 
+    print("---------------------------------")
+    print("setting up digitizer...")
+    print("---------------------------------")
     digitizer = setup_digitizer(digitizer_config)
 
     # Read in ground-truth / experiment parameter spreadsheet so we have the
