@@ -211,6 +211,22 @@ def collect_rpm_data(collect_rpm, run_main_loop, pipe):
         # executes one thread at a time.
         pipe.send((avg_rpm, rpm_std_dev))
 
+def arm():
+    """Arm the flight controller.
+
+    Manually arming the flight controller enables unlimited bench testing,
+    which is needed in order to manually control the motors without
+    going into a failsafe or runaway takeoff prevention mode.
+    """
+    global board
+    
+    # When enabling motor testing mode, betaflight configurator disables
+    # armingDisabled and enables runawayTakeoffPreventionDisabled; that is,
+    # arming is enabled and runaway takeoff prevention is disabled.
+    # https://github.com/betaflight/betaflight-configurator/blob/2f4337bb9fabb6c9c56cf8e4b9144bda134910fb/src/js/tabs/motors.js#L945
+    # https://github.com/betaflight/betaflight-configurator/blob/2f4337bb9fabb6c9c56cf8e4b9144bda134910fb/src/js/msp/MSPHelper.js#L2758
+    board.set_ARMING_DISABLED(armingDisabled=0, runawayTakeoffPreventionDisabled=1)
+
 
 def throw_out_old_telemetry():
     """Read outdated telemetry values.
