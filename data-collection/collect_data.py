@@ -124,8 +124,70 @@ def set_throttle(experiment_params, idx):
 
 
 def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
-    """
+    """Record motor data to spreadsheet at row idx
+
+    This function records data to specific locations in the spreadsheet.
+    The location is determined by the row index (idx), and the experiment
+    parameters (experiment_params). Each experiment parameter that is previously
+    determined to be data we are collecting is nominaally left empty and is 
+    overwritten in this function if filled at the row index provided.
     
+    Args:
+        experiment_params:
+            The experiment parameters are the column headers of all of the necessay
+            setup information as well as the data collected. 
+            The parameters include:{
+                [motor configuration],
+                [prop size],
+                [# blades],
+                [fill factor],
+                [lens tube extension distance],
+                [# images],
+                [tilt angle],
+                [throttle front right],
+                [throttle front left], 
+                [throttle back right],
+                [throttle back left],
+                [motor rpm front right],
+                [motor rpm front left],
+                [motor rpm back right],
+                [motor rpm back left],
+                [motor rpm front right std dev],
+                [motor rpm front left std dev],
+                [motor rpm back right std dev],
+                [motor rpm back left std dev],
+                [prop frequency front right],
+                [prop frequency front left], 
+                [prop frequency back right],
+                [prop frequency back left],
+                [prop frequency front right std dev], 
+                [prop frequency front left std dev], 
+                [prop frequency back right std dev],
+                [prop frequency back left std dev], 
+                [distance (m)], 
+                [filename]
+                }
+        idx:
+            The row index in the spreadsheet to access the data at for this function
+        avg_rpm:
+            This data contains the information recieved from the drone, serving as
+            our ground truth data. This data contains the motor rotation speed
+            information from all 4 motors attached to the drone.
+            The motor configoration is as follows:{
+                [Back Left],
+                [Front Left],
+                [Back Right],
+                [Front Right]
+            }
+        std_dev_rpm:
+            This data contains the standard deviation of the motor rotation speed
+            information from all 4 motors attached to the drone.
+            The motor configoration is as follows:{
+                [Back Left],
+                [Front Left],
+                [Back Right],
+                [Front Right]
+            }
     """
     experiment_params.at[idx, "motor rpm front right"] = str(avg_rpm[:, 3])
     experiment_params.at[idx, "motor rpm front left"] = avg_rpm[:, 1]
@@ -182,8 +244,43 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
         motor_rpm:
 
         experiment_params:
-
+            The experiment parameters are the column headers of all of the necessay
+            setup information as well as the data collected. 
+            The parameters include:{
+                [motor configuration],
+                [prop size],
+                [# blades],
+                [fill factor],
+                [lens tube extension distance],
+                [# images],
+                [tilt angle],
+                [throttle front right],
+                [throttle front left], 
+                [throttle back right],
+                [throttle back left],
+                [motor rpm front right],
+                [motor rpm front left],
+                [motor rpm back right],
+                [motor rpm back left],
+                [motor rpm front right std dev],
+                [motor rpm front left std dev],
+                [motor rpm back right std dev],
+                [motor rpm back left std dev],
+                [prop frequency front right],
+                [prop frequency front left], 
+                [prop frequency back right],
+                [prop frequency back left],
+                [prop frequency front right std dev], 
+                [prop frequency front left std dev], 
+                [prop frequency back right std dev],
+                [prop frequency back left std dev], 
+                [distance (m)], 
+                [filename]
+                }
         idx:
+            The row index in the spreadsheet to access the data at for this function
+        motor_rpm:
+            Drone motor rotations per minute information to be converted into propeller frequency
     """
     n_blades = experiment_params.at[idx, "# blades"]
 
@@ -205,6 +302,52 @@ def set_tilt_angle(pan_tilt, experiment_params, idx):
     pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
 
 def create_h5_filename(experiment_params, idx, filename_prefix):
+    """Creates the filename for the h5 file
+    
+    Creates the name based on thr timestamp, tilt angle and drone parameters.
+
+    Args:
+        experiment_params:
+            The experiment parameters are the column headers of all of the necessay
+            setup information as well as the data collected. 
+            The parameters include:{
+                [motor configuration],
+                [prop size],
+                [# blades],
+                [fill factor],
+                [lens tube extension distance],
+                [# images],
+                [tilt angle],
+                [throttle front right],
+                [throttle front left], 
+                [throttle back right],
+                [throttle back left],
+                [motor rpm front right],
+                [motor rpm front left],
+                [motor rpm back right],
+                [motor rpm back left],
+                [motor rpm front right std dev],
+                [motor rpm front left std dev],
+                [motor rpm back right std dev],
+                [motor rpm back left std dev],
+                [prop frequency front right],
+                [prop frequency front left], 
+                [prop frequency back right],
+                [prop frequency back left],
+                [prop frequency front right std dev], 
+                [prop frequency front left std dev], 
+                [prop frequency back right std dev],
+                [prop frequency back left std dev], 
+                [distance (m)], 
+                [filename]
+                }
+        idx:
+            The row index in the spreadsheet to access the data at for this function
+        filename_prefix:
+            An additional prefix able to be added by the user, but unnecessary
+            for base filename creation
+
+    """
     tilt_angle = f"tilt-{experiment_params.at[idx, 'tilt angle']}"
 
     throttle_fr = ""
@@ -234,6 +377,12 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
     return filename
 
 def prompt_for_lens_tube_distance():
+    """Prompts the user for the length of the lens tube
+    
+    The length of the lens tube affects the data due to the offset it creates
+    in beam size as well as the divergance point.
+
+    """
     is_lens_tube_distance_valid = False
     while not is_lens_tube_distance_valid:
         lens_tube_distance = input(
@@ -247,9 +396,87 @@ def prompt_for_lens_tube_distance():
 
     return lens_tube_distance
 
-def save_h5_file(
-    h5_filename, data_dir, experiment_params, idx, data, timestamps, capture_time, avg_rpm, rpm_std_dev, digitizer, is_data_in_volts, distance
-):
+def save_h5_file(h5_filename, data_dir, experiment_params, idx, 
+                 data, timestamps, capture_time, avg_rpm, rpm_std_dev, 
+                 digitizer, is_data_in_volts, distance):
+    """Define the structure of the h5 file for experiment information
+
+    This function creates the h5 file for storing all the information related to
+    the experiment, including setup parameters, data collected, and data calculated.
+
+    Args:
+        h5_filename:
+            The name for the h5 file for saving the file to memory.
+        data_dir:
+            The data directory for the file to be saved into.
+        experiment_params:
+            The experiment parameters are the column headers of all of the necessay
+            setup information as well as the data collected. 
+            The parameters include:{
+                [motor configuration],
+                [prop size],
+                [# blades],
+                [fill factor],
+                [lens tube extension distance],
+                [# images],
+                [tilt angle],
+                [throttle front right],
+                [throttle front left], 
+                [throttle back right],
+                [throttle back left],
+                [motor rpm front right],
+                [motor rpm front left],
+                [motor rpm back right],
+                [motor rpm back left],
+                [motor rpm front right std dev],
+                [motor rpm front left std dev],
+                [motor rpm back right std dev],
+                [motor rpm back left std dev],
+                [prop frequency front right],
+                [prop frequency front left], 
+                [prop frequency back right],
+                [prop frequency back left],
+                [prop frequency front right std dev], 
+                [prop frequency front left std dev], 
+                [prop frequency back right std dev],
+                [prop frequency back left std dev], 
+                [distance (m)], 
+                [filename]
+                }
+        idx:
+            The row index in the spreadsheet to access the data at for this function
+        data:
+             
+        timestamps:
+
+        capture_time:
+
+        avg_rpm:
+            This data contains the information recieved from the drone, serving as
+            our ground truth data. This data contains the motor rotation speed
+            information from all 4 motors attached to the drone.
+            The motor configoration is as follows:{
+                [Back Left],
+                [Front Left],
+                [Back Right],
+                [Front Right]
+            }
+        std_dev_rpm:
+            This data contains the standard deviation of the motor rotation speed
+            information from all 4 motors attached to the drone.
+            The motor configoration is as follows:{
+                [Back Left],
+                [Front Left],
+                [Back Right],
+                [Front Right]
+            }
+        digitizer:
+            The digitizer object for referring to the data collected from it
+        is_data_in_volts: 
+
+        distance:
+            How far away the drone is in meters.
+    """
     os.makedirs(data_dir, exist_ok=True)
 
     with h5py.File(data_dir + os.sep + h5_filename + ".hdf5", "w") as h5file:
