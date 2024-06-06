@@ -122,6 +122,71 @@ def set_throttle(experiment_params, idx):
         ramp_interval=0.25,
     )
 
+def does_row_have_data(experiment_params, idx):
+    """Check if there is data in the spreadsheet at row idx.
+    
+    This code checks if, at the index point provided, 
+    whether the spreadsheet has any average rpm values saved.
+    
+    Args:
+        experiment_params:
+            The experiment parameters are the column headers of all of the necessay
+            setup information as well as the data collected. 
+            The parameters include:{
+                [motor configuration],
+                [prop size],
+                [# blades],
+                [fill factor],
+                [lens tube extension distance],
+                [# images],
+                [tilt angle],
+                [throttle front right],
+                [throttle front left], 
+                [throttle back right],
+                [throttle back left],
+                [motor rpm front right],
+                [motor rpm front left],
+                [motor rpm back right],
+                [motor rpm back left],
+                [motor rpm front right std dev],
+                [motor rpm front left std dev],
+                [motor rpm back right std dev],
+                [motor rpm back left std dev],
+                [prop frequency front right],
+                [prop frequency front left], 
+                [prop frequency back right],
+                [prop frequency back left],
+                [prop frequency front right std dev], 
+                [prop frequency front left std dev], 
+                [prop frequency back right std dev],
+                [prop frequency back left std dev], 
+                [distance (m)], 
+                [filename]
+                }
+        idx:
+            The row index in the spreadsheet to access the data at for this function
+
+    Returns:
+        has_data:
+            Boolean indicating whether the row has rpm data saved in it.
+    """
+    has_data = False
+
+    rpm_fr = experiment_params.at[idx, "motor rpm front right"]
+    rpm_fl = experiment_params.at[idx, "motor rpm front left"]
+    rpm_br = experiment_params.at[idx, "motor rpm back right"]
+    rpm_bl = experiment_params.at[idx, "motor rpm back left"]
+
+    if not np.isnan(rpm_fr):
+        has_data = True
+    if not np.isnan(rpm_fl):
+        has_data = True
+    if not np.isnan(rpm_br):
+        has_data = True
+    if not np.isnan(rpm_bl):
+        has_data = True
+
+    return has_data 
 
 def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
     """Record motor data to spreadsheet at row idx
@@ -600,6 +665,11 @@ def main(
 
     try:
         for idx, params in experiment_params.iterrows():
+            
+            # Skip the current parameter set if the spreadsheet already has
+            # data recorded for that row.
+            if does_row_have_data(experiment_params, idx):
+                continue
 
             experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
 
