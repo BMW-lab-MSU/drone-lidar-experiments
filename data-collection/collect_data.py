@@ -9,7 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import motor_control
+import motor_control.motor_control as motor_control
 from quickset_pan_tilt import controller, protocol
 # import wingbeat_lidar as lidar
 from wingbeat_lidar.digitizer import Digitizer
@@ -46,6 +46,8 @@ def setup_drone_controller(port):
     )
 
     motor_control.connect(port)
+
+    motor_control.arm()
 
     return collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process
 
@@ -100,11 +102,14 @@ def is_manual_adjustment_needed(experiment_params, idx):
         return False
 
 
-def set_throttle(experiment_params, idx):
+def set_throttle(experiment_params, idx, ramp_time=None):
     # Make the motors ramp to the new rpm value over 5 seconds. This seems like
     # a safe value that won't cause any super crazy current spikes, but the
     # value is ultimately arbitrary.
-    RAMP_TIME = 2.5
+    if ramp_time is not None:
+        RAMP_TIME = ramp_time
+    else:
+        RAMP_TIME = 2.5
 
     front_left_throttle = np.nan_to_num(experiment_params.at[idx, "throttle front left"])
     front_right_throttle = np.nan_to_num(experiment_params.at[idx, "throttle front right"])
@@ -306,8 +311,6 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
     location is just the number of blades on the propeller.
 
     Args:
-        motor_rpm:
-
         experiment_params:
             The experiment parameters are the column headers of all of the necessay
             setup information as well as the data collected. 
@@ -690,11 +693,14 @@ def main(
             # pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
             set_tilt_angle(pan_tilt, experiment_params, idx)
 
-            motor_control.connect(drone_port)
+            # motor_control.connect(drone_port)
             print("---------------------------------")
             print("setting throttle")
             print("---------------------------------")
             set_throttle(experiment_params, idx)
+
+            print("letting rpm telemetry stabilize")
+            motor_control.throw_out_old_telemetry()
 
             n_images = int(experiment_params.at[idx, "# images"])
 
@@ -711,6 +717,7 @@ def main(
             print("---------------------------------")
             for image_num in range(n_images):
                 print(image_num)
+                set_throttle(experiment_params, idx, ramp_time=0)
 
                 # Tell the process to start collecting rpm telemetry
                 collect_rpm.set()
