@@ -37,6 +37,10 @@ def setup_pan_tilt_controller(port):
 
 # Initialize drone controller
 def setup_drone_controller(port):
+    motor_control.connect(port)
+    motor_control.arm()
+
+def setup_rpm_collection_process():
     # Setup multiprocessing
     collect_rpm = multiprocessing.Event()
     experiment_active = multiprocessing.Event()
@@ -45,12 +49,7 @@ def setup_drone_controller(port):
         target=motor_control.collect_rpm_data, args=(collect_rpm, experiment_active, rpm_send_pipe)
     )
 
-    motor_control.connect(port)
-
-    motor_control.arm()
-
     return collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process
-
 
 def load_port_configuration(config_file="./config/serial-ports.toml"):
     with open(config_file, "rb") as f:
@@ -635,8 +634,9 @@ def main(
     print("---------------------------------")
     print("setting up drone motor control...")
     print("---------------------------------")
+    setup_drone_controller(drone_port)
     collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process = (
-        setup_drone_controller(drone_port)
+        setup_rpm_collection_process()
     )
 
     print("---------------------------------")
