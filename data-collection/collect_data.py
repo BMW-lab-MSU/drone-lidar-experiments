@@ -768,7 +768,7 @@ def main(
 
             # Save the spreadsheet just in case something in the experiment blows
             # up causing us to kill this code midway through the experiments.
-            experiment_params.to_excel(experiment_spreadsheet_path)
+            experiment_params.to_excel(experiment_spreadsheet_path, index=False)
 
         # The experiment is over; tell the rpm collection process that it can
         # terminate itself.
@@ -778,7 +778,7 @@ def main(
         # rpm_collection_process.join()
     except KeyboardInterrupt:
         # save spreadsheet
-        experiment_params.to_excel(experiment_spreadsheet_path)
+        experiment_params.to_excel(experiment_spreadsheet_path, index=False)
 
         pan_tilt.home()
 
