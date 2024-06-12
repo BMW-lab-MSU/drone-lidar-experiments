@@ -40,6 +40,13 @@ def setup_drone_controller(port):
     motor_control.connect(port)
     motor_control.arm()
 
+def reboot_drone_controller():
+    # We need to wait for a while after rebooting so the flight controller
+    # has fully rebooted before we try connecting to it again.
+    REBOOT_SLEEP_TIME = 15
+    motor_control.board.reboot()
+    time.sleep(REBOOT_SLEEP_TIME)
+
 def setup_rpm_collection_process():
     # Setup multiprocessing
     collect_rpm = multiprocessing.Event()
@@ -687,6 +694,11 @@ def main(
                         'Press "y" when you are ready to run the next configuration: '
                     )
 
+            # After rebooting, the flight controller needs to be reconnected.
+            # Additionally, The drone might have needed to be unplugged to
+            # adjust the motor configuration, so we will reconnect to it.
+            setup_drone_controller()
+
             print("---------------------------------")
             print("setting tilt angle")
             print("---------------------------------")
@@ -769,6 +781,11 @@ def main(
             # Save the spreadsheet just in case something in the experiment blows
             # up causing us to kill this code midway through the experiments.
             experiment_params.to_excel(experiment_spreadsheet_path, index=False)
+
+            # The betaflight firmware ocassionally dies during the experiments;
+            # rebooting the drone seems to help make the drone run longer
+            # before dying.
+            reboot_drone_controller()
 
         # The experiment is over; tell the rpm collection process that it can
         # terminate itself.
