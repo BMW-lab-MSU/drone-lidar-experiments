@@ -155,7 +155,7 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
     current_throttle = throttle
 
 
-def collect_rpm_data(collect_rpm, run_main_loop, pipe):
+def collect_rpm_data(collect_rpm, run_main_loop, telemetry_stable, pipe):
     """Collect RPM telemetry data in the background.
 
     Collects RPM telemetry from the FC/ESC every ~0.1 seconds. This method is
@@ -191,18 +191,25 @@ def collect_rpm_data(collect_rpm, run_main_loop, pipe):
     run_main_loop.wait()
     while run_main_loop.is_set():
 
-        rpm = np.empty((N_MOTORS, RPM_BUFFER_LENGTH))
+        rpm = np.zeros((N_MOTORS, RPM_BUFFER_LENGTH))
 
         n_telemetry_packets = 0
         packet_idx = 0
 
         collect_rpm.wait()
-        while collect_rpm.is_set():
-            rpm[:,packet_idx] = get_rpm_telemetry()
-            packet_idx += 1
-            n_telemetry_packets += 1
 
-            sleep(RPM_SAMPLING_PERIOD)
+        throw_out_old_telemetry()
+
+        telemetry_stable.set()
+
+        while collect_rpm.is_set():
+            
+            current_packet = get_rpm_telemetry()
+
+            if current_packet is not None:
+                rpm[:,packet_idx] = current_packet
+                packet_idx += 1
+                n_telemetry_packets += 1
 
         avg_rpm = np.mean(rpm[:,0:n_telemetry_packets], axis=1)
         rpm_std_dev = np.std(rpm[:,0:n_telemetry_packets], axis=1)
@@ -213,6 +220,8 @@ def collect_rpm_data(collect_rpm, run_main_loop, pipe):
         # the ESC or serial port, threading would work fine even though threading only
         # executes one thread at a time.
         pipe.send((avg_rpm, rpm_std_dev))
+
+        telemetry_stable.clear()
 
 def arm():
     """Arm the flight controller.

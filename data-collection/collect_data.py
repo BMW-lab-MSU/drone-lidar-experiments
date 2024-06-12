@@ -51,12 +51,13 @@ def setup_rpm_collection_process():
     # Setup multiprocessing
     collect_rpm = multiprocessing.Event()
     experiment_active = multiprocessing.Event()
+    telemetry_stable = multiprocessing.Event()
     rpm_recv_pipe, rpm_send_pipe = multiprocessing.Pipe(False)
     rpm_collection_process = multiprocessing.Process(
-        target=motor_control.collect_rpm_data, args=(collect_rpm, experiment_active, rpm_send_pipe)
+        target=motor_control.collect_rpm_data, args=(collect_rpm, experiment_active, telemetry_stable, rpm_send_pipe)
     )
 
-    return collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process
+    return collect_rpm, experiment_active, telemetry_stable, rpm_recv_pipe, rpm_collection_process
 
 def load_port_configuration(config_file="./config/serial-ports.toml"):
     with open(config_file, "rb") as f:
@@ -641,8 +642,7 @@ def main(
     print("---------------------------------")
     print("setting up drone motor control...")
     print("---------------------------------")
-    setup_drone_controller(drone_port)
-    collect_rpm, experiment_active, rpm_recv_pipe, rpm_collection_process = (
+    collect_rpm, experiment_active, telemetry_stable, rpm_recv_pipe, rpm_collection_process = (
         setup_rpm_collection_process()
     )
 
@@ -709,10 +709,7 @@ def main(
             print("---------------------------------")
             print("setting throttle")
             print("---------------------------------")
-            set_throttle(experiment_params, idx)
 
-            print("letting rpm telemetry stabilize")
-            motor_control.throw_out_old_telemetry()
 
             n_images = int(experiment_params.at[idx, "# images"])
 
@@ -733,6 +730,8 @@ def main(
 
                 # Tell the process to start collecting rpm telemetry
                 collect_rpm.set()
+
+                telemetry_stable.wait()
 
                 # Collect the lidar data
                 (
