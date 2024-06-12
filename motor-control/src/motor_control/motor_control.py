@@ -58,10 +58,13 @@ def get_rpm_telemetry():
     global board
 
     board.send_RAW_msg(MSPCodes["MSP_MOTOR_TELEMETRY"])
-    recv = board.receive_msg()
-    board.process_recv_data(recv)
+    recv = board.receive_msg(delete_buffer=True)
 
-    return np.array(board.MOTOR_TELEMETRY_DATA["rpm"][0:4])
+    if recv['dataView']:
+        board.process_recv_data(recv)
+        return np.array(board.MOTOR_TELEMETRY_DATA["rpm"][0:4])
+    else:
+        return None
 
 
 def connect(serial_port):
@@ -237,8 +240,19 @@ def throw_out_old_telemetry():
     has been enough to flush the outdated telemetry packets.
     """
 
-    for i in range(0, 10):
-        get_rpm_telemetry()
+    # Throw out old buffered data
+    rpm = get_rpm_telemetry()
+    while rpm is not None:
+        rpm = get_rpm_telemetry()
+
+    # Once the rpm telemetry is reporting None, that means the buffer has been
+    # flushed, so we can start collecting the updated rpm telemetry.
+    while rpm is None:
+        rpm = get_rpm_telemetry()
+
+    # Throw out some more rpm data, just in case.
+    for i in range(20):
+        rpm = get_rpm_telemetry()
 
 
 def _convert_pct_throttle_to_msp(throttle_pct):
