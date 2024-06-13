@@ -719,16 +719,14 @@ def main(
                         'Press "y" when you are ready to run the next configuration: '
                     )
 
+            print("setting throttle")
+            set_throttle(experiment_params, idx)
+            print("---------------------------------")
 
             print("---------------------------------")
             print("setting tilt angle")
             set_tilt_angle(pan_tilt, experiment_params, idx)
             print("---------------------------------")
-
-            print("setting throttle")
-            set_throttle(experiment_params, idx)
-            print("---------------------------------")
-
 
             n_images = int(experiment_params.at[idx, "# images"])
 
