@@ -118,7 +118,8 @@ def set_throttle(experiment_params, idx):
         ],
         ramp_interval=0.25,
     )
-
+    print(f"Dront Motor Throttles FR: {throttle_fr} FL: {throttle_fl} BR: {throttle_br} BL: {throttle_bl}")
+          
 def does_row_have_data(experiment_params, idx):
     """Check if there is data in the spreadsheet at row idx.
     
@@ -474,6 +475,10 @@ def prompt_for_lens_tube_distance():
     The length of the lens tube affects the data due to the offset it creates
     in beam size as well as the divergance point.
 
+    Returns:
+        lens_tube_distance:
+            The entered distance of how far the lens tube is extended.
+
     """
     is_lens_tube_distance_valid = False
     while not is_lens_tube_distance_valid:
@@ -652,21 +657,20 @@ def main(
 
     print("---------------------------------")
     print("setting up pan tilt mount...")
-    print("---------------------------------")
     pan_tilt = setup_pan_tilt_controller(pan_tilt_port)
-
-
     print("---------------------------------")
+
+
     print("setting up drone motor control...")
+    setup_drone_controller(drone_port)
     print("---------------------------------")
     collect_rpm, experiment_active, telemetry_stable, rpm_recv_pipe, rpm_collection_process = (
         setup_rpm_collection_process()
     )
 
-    print("---------------------------------")
     print("setting up digitizer...")
-    print("---------------------------------")
     digitizer = setup_digitizer(digitizer_config)
+    print("---------------------------------")
 
     # Read in ground-truth / experiment parameter spreadsheet so we have the
     # experiment parameters we need, i.e., motor speed, tilt angle, etc.
@@ -718,13 +722,13 @@ def main(
 
             print("---------------------------------")
             print("setting tilt angle")
-            print("---------------------------------")
             # pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
             set_tilt_angle(pan_tilt, experiment_params, idx)
+            print("---------------------------------")
 
             # motor_control.connect(drone_port)
-            print("---------------------------------")
             print("setting throttle")
+            set_throttle(experiment_params, idx)
             print("---------------------------------")
 
 
@@ -763,6 +767,9 @@ def main(
                 (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
                 # print(avg_rpm[image_num,:])
                 # print(std_dev_rpm[image_num,:])
+                print_rpm = []
+                for i in avg_rpm[image_num, :]: print_rpm.append(int(i))
+                print(f"Image collected: {image_num}, \tRPM: {print_rpm}")
 
 
             # Put the ground-truth rpm data into the dataframe
@@ -814,9 +821,6 @@ def main(
         motor_control.set_throttle([0,0,0,0])
 
         pan_tilt.home()
-
-        motor_control.set_throttle([0,0,0,0], ramp_time=5)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
