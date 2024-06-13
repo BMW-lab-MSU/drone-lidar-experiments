@@ -711,6 +711,7 @@ def main(
             avg_rpm = np.empty((n_images, N_MOTORS))
             std_dev_rpm = np.empty((n_images, N_MOTORS))
 
+            telemetry_stable.clear()
 
             print("---------------------------------")
             print("collecting data")

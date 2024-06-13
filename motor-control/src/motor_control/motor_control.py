@@ -197,9 +197,10 @@ def collect_rpm_data(collect_rpm, run_main_loop, telemetry_stable, pipe):
 
         collect_rpm.wait()
 
-        throw_out_old_telemetry()
+        if not telemetry_stable.is_set():
+            throw_out_old_telemetry()
 
-        telemetry_stable.set()
+            telemetry_stable.set()
 
         while collect_rpm.is_set():
             
@@ -220,7 +221,6 @@ def collect_rpm_data(collect_rpm, run_main_loop, telemetry_stable, pipe):
         # executes one thread at a time.
         pipe.send((avg_rpm, rpm_std_dev))
 
-        telemetry_stable.clear()
 
 def arm():
     """Arm the flight controller.
