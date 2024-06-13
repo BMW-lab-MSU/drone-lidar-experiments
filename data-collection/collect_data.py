@@ -170,26 +170,58 @@ def does_row_have_data(experiment_params, idx):
             The row index in the spreadsheet to access the data at for this function
 
     Returns:
-        has_data:
+        has_valid_data:
             Boolean indicating whether the row has rpm data saved in it.
     """
     has_data = False
+    has_valid_data = True
 
     rpm_fr = experiment_params.at[idx, "motor rpm front right"]
     rpm_fl = experiment_params.at[idx, "motor rpm front left"]
     rpm_br = experiment_params.at[idx, "motor rpm back right"]
     rpm_bl = experiment_params.at[idx, "motor rpm back left"]
 
-    if not np.isnan(rpm_fr):
-        has_data = True
-    if not np.isnan(rpm_fl):
-        has_data = True
-    if not np.isnan(rpm_br):
-        has_data = True
-    if not np.isnan(rpm_bl):
+    rpm_fr_std = experiment_params.at[idx, "motor rpm front right std dev"]
+    rpm_fl_std = experiment_params.at[idx, "motor rpm front left std dev"]
+    rpm_br_std = experiment_params.at[idx, "motor rpm back right std dev"]
+    rpm_bl_std = experiment_params.at[idx, "motor rpm back left std dev"] 
+
+    if (isinstance(rpm_fr,str) or 
+        isinstance(rpm_fl,str) or 
+        isinstance(rpm_br,str) or 
+        isinstance(rpm_bl,str) or
+        isinstance(rpm_fr_std,str) or
+        isinstance(rpm_fl_std,str) or
+        isinstance(rpm_br_std,str) or
+        isinstance(rpm_bl_std,str)):
         has_data = True
 
-    return has_data 
+    if has_data:
+        # print(f"Data seen:\n{rpm_fr.split()}\n{rpm_fl.split()}\n{rpm_br.split()}\n{rpm_bl.split()}")
+        rpm_fr_array = rpm_fr.replace("["," ").replace("]"," ").split()
+        rpm_fl_array = rpm_fl.replace("["," ").replace("]"," ").split()
+        rpm_br_array = rpm_br.replace("["," ").replace("]"," ").split()
+        rpm_bl_array = rpm_bl.replace("["," ").replace("]"," ").split()
+        
+        rpm_fr_std_array = rpm_fr_std.replace("["," ").replace("]"," ").split()
+        rpm_fl_std_array = rpm_fl_std.replace("["," ").replace("]"," ").split()
+        rpm_br_std_array = rpm_br_std.replace("["," ").replace("]"," ").split()
+        rpm_bl_std_array = rpm_bl_std.replace("["," ").replace("]"," ").split()
+        
+        for i in range(len(rpm_fr_array)):
+            if (float(rpm_fr_array[i]) == 0 and 
+                float(rpm_fl_array[i]) == 0 and 
+                float(rpm_br_array[i]) == 0 and 
+                float(rpm_bl_array[i]) == 0):
+                has_valid_data = False
+            if (float(rpm_fr_std_array[i]) == 0 and 
+                float(rpm_fl_std_array[i]) == 0 and 
+                float(rpm_br_std_array[i]) == 0 and 
+                float(rpm_bl_std_array[i]) == 0):
+                has_valid_data = False
+    else:
+        has_valid_data = False
+    return has_valid_data 
 
 def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
     """Record motor data to spreadsheet at row idx
@@ -668,8 +700,12 @@ def main(
         for idx, params in experiment_params.iterrows():
             
             # Skip the current parameter set if the spreadsheet already has
-            # data recorded for that row.
-            if does_row_have_data(experiment_params, idx):
+            # data recorded for the current and next 2 rows.
+            has_data = [False, False, False]
+            for i in range(3):
+                has_data[i] = does_row_have_data(experiment_params, idx+i)
+            if has_data[0] and has_data[1] and has_data[2]:
+                print(f"has data, Continuing to row {idx + 1}")
                 continue
 
             experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
