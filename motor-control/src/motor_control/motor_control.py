@@ -75,7 +75,7 @@ def connect(serial_port):
     """
     global board
 
-    board = MSPy(serial_port)
+    board = MSPy(serial_port, loglevel='DEBUG', timeout=0.1, trials=5)
     board.connect()
 
 
