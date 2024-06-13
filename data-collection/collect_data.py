@@ -722,11 +722,9 @@ def main(
 
             print("---------------------------------")
             print("setting tilt angle")
-            # pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
             set_tilt_angle(pan_tilt, experiment_params, idx)
             print("---------------------------------")
 
-            # motor_control.connect(drone_port)
             print("setting throttle")
             set_throttle(experiment_params, idx)
             print("---------------------------------")
@@ -765,8 +763,6 @@ def main(
 
                 # Get the average rpm values
                 (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
-                # print(avg_rpm[image_num,:])
-                # print(std_dev_rpm[image_num,:])
                 print_rpm = []
                 for i in avg_rpm[image_num, :]: print_rpm.append(int(i))
                 print(f"Image collected: {image_num}, \tRPM: {print_rpm}")
