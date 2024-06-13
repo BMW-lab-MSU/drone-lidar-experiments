@@ -805,11 +805,15 @@ def main(
         experiment_active.clear()
 
         # Stop the rpm collection process
-        # rpm_collection_process.join()
+        rpm_collection_process.join()
+
     except KeyboardInterrupt:
         # The experiment is over; tell the rpm collection process that it can
         # terminate itself.
         experiment_active.clear()
+
+        # Stop the rpm collection process
+        rpm_collection_process.join()
 
         # save spreadsheet
         experiment_params.to_excel(experiment_spreadsheet_path, index=False)
