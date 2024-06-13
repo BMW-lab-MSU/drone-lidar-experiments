@@ -743,8 +743,6 @@ def main(
             print("collecting data")
             print("---------------------------------")
             for image_num in range(n_images):
-                print(image_num)
-                set_throttle(experiment_params, idx, ramp_time=0)
 
                 # Tell the process to start collecting rpm telemetry
                 collect_rpm.set()
