@@ -109,15 +109,7 @@ def is_manual_adjustment_needed(experiment_params, idx):
         return False
 
 
-def set_throttle(experiment_params, idx, ramp_time=None):
-    # Make the motors ramp to the new rpm value over 5 seconds. This seems like
-    # a safe value that won't cause any super crazy current spikes, but the
-    # value is ultimately arbitrary.
-    if ramp_time is not None:
-        RAMP_TIME = ramp_time
-    else:
-        RAMP_TIME = 2.5
-
+def set_throttle(experiment_params, idx):
     throttle_fl = np.nan_to_num(experiment_params.at[idx, "throttle front left"])
     throttle_fr = np.nan_to_num(experiment_params.at[idx, "throttle front right"])
     throttle_bl = np.nan_to_num(experiment_params.at[idx, "throttle back left"])
@@ -130,7 +122,6 @@ def set_throttle(experiment_params, idx, ramp_time=None):
             throttle_br,
             throttle_fr,
         ],
-        ramp_time=RAMP_TIME,
         ramp_interval=0.25,
     )
 

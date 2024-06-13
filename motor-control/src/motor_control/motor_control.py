@@ -79,7 +79,7 @@ def connect(serial_port):
     board.connect()
 
 
-def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
+def set_throttle(throttle, ramp_interval=0.1):
     """Set motor throttle.
 
     Motor throttle values are between 0 and 100, with a resolution of 0.1.
@@ -89,9 +89,6 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
             An iterable of the throttle values for the motors. Must have a
             length of 4. When looking at the front of the drone, the motor
             order is [back left, front left, back right, front right].
-        ramp_time:
-            Ramp motors to their final throttle values over this time. Defaults
-            to None, which means no ramp time.
         ramp_interval:
             The interval, in seconds, at which the motor throttle values are
             updated during the ramp time. Defaults to 0.1 seconds.
@@ -103,7 +100,9 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
 
     final_throttle = _convert_pct_throttle_to_msp(throttle)
 
-    if ramp_time:
+    ramp_time = np.max(np.abs(np.array(throttle) - np.array(current_throttle))) / 20
+
+    if ramp_time != 0:
         n_steps = round(ramp_time / ramp_interval)
 
         intermediate_throttle = np.ndarray(shape=(4, n_steps))
@@ -122,7 +121,7 @@ def set_throttle(throttle, ramp_time=None, ramp_interval=0.1):
         )
 
         for i in range(n_steps):
-            print(intermediate_throttle[:, i])
+            # print(intermediate_throttle[:, i])
             board.send_RAW_MOTORS(
                 [
                     intermediate_throttle[0, i],
