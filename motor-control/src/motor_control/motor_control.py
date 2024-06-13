@@ -259,7 +259,7 @@ def throw_out_old_telemetry():
         rpm = get_rpm_telemetry()
 
     # Throw out some more rpm data, just in case.
-    for i in range(20):
+    for i in range(100):
         rpm = get_rpm_telemetry()
 
 
