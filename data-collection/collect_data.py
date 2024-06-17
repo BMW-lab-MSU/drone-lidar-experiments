@@ -171,6 +171,11 @@ def does_row_have_data(experiment_params, idx):
     has_data = False
     has_valid_data = True
 
+    throttle_fr = experiment_params.at[idx, "throttle front right"]
+    throttle_fl = experiment_params.at[idx, "throttle front left"]
+    throttle_br = experiment_params.at[idx, "throttle back right"]
+    throttle_bl = experiment_params.at[idx, "throttle back left"]
+
     rpm_fr = experiment_params.at[idx, "motor rpm front right"]
     rpm_fl = experiment_params.at[idx, "motor rpm front left"]
     rpm_br = experiment_params.at[idx, "motor rpm back right"]
@@ -204,16 +209,35 @@ def does_row_have_data(experiment_params, idx):
         rpm_bl_std_array = rpm_bl_std.replace("["," ").replace("]"," ").split()
         
         for i in range(len(rpm_fr_array)):
-            if (float(rpm_fr_array[i]) == 0 and 
+            if((float(rpm_fr_array[i]) == 0 and 
                 float(rpm_fl_array[i]) == 0 and 
                 float(rpm_br_array[i]) == 0 and 
-                float(rpm_bl_array[i]) == 0):
-                has_valid_data = False
-            if (float(rpm_fr_std_array[i]) == 0 and 
+                float(rpm_bl_array[i]) == 0) or
+               (float(rpm_fr_std_array[i]) == 0 and 
                 float(rpm_fl_std_array[i]) == 0 and 
                 float(rpm_br_std_array[i]) == 0 and 
-                float(rpm_bl_std_array[i]) == 0):
+                float(rpm_bl_std_array[i]) == 0)):
                 has_valid_data = False
+                if isinstance(throttle_fr,int):
+                    if throttle_fr == 0:
+                        has_valid_data = True
+                    else:
+                        has_valid_data = False
+                if isinstance(throttle_fl,int):
+                    if throttle_fl == 0:
+                        has_valid_data = True   
+                    else:
+                        has_valid_data = False
+                if isinstance(throttle_br,int):
+                    if throttle_br == 0:
+                        has_valid_data = True
+                    else:
+                        has_valid_data = False
+                if isinstance(throttle_bl,int):
+                    if throttle_bl == 0:
+                        has_valid_data = True
+                    else:
+                        has_valid_data = False
     else:
         has_valid_data = False
     return has_valid_data 
