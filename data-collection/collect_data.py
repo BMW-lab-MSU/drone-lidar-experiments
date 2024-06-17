@@ -23,7 +23,6 @@ def setup_digitizer(config_file="./config/adc-config.toml"):
 
     return digitizer
 
-
 # Initialize pan-tilt mount controller
 def setup_pan_tilt_controller(port):
     pan_tilt = controller.ControllerSerial(protocol.PTCR20(), port)
@@ -34,13 +33,12 @@ def setup_pan_tilt_controller(port):
 
     return pan_tilt
 
-
 # Initialize drone controller
 def setup_drone_controller(port):
     motor_control.connect(port)
     motor_control.arm()
 
-
+# Start threads for collecting rpm data from the drone
 def setup_rpm_collection_process():
     # Setup multiprocessing
     collect_rpm = multiprocessing.Event()
@@ -53,13 +51,14 @@ def setup_rpm_collection_process():
 
     return collect_rpm, experiment_active, telemetry_stable, rpm_recv_pipe, rpm_collection_process
 
+# load in the COM ports for the drone and pan tilt associated
 def load_port_configuration(config_file="./config/serial-ports.toml"):
     with open(config_file, "rb") as f:
         config = tomllib.load(f)
 
     return config["pan_tilt_port"], config["drone_port"]
 
-
+# Pause data collection for configuration of the drones
 def is_manual_adjustment_needed(experiment_params, idx):
     # if motor configuration, prop size, or fill factor changed, then we need to pause
     # the code so we can manually adjust the experiment setup
@@ -102,7 +101,7 @@ def is_manual_adjustment_needed(experiment_params, idx):
     else:
         return False
 
-
+# Set the throttle to a value from the experiment parameters sheet
 def set_throttle(experiment_params, idx):
     throttle_fl = np.nan_to_num(experiment_params.at[idx, "throttle front left"])
     throttle_fr = np.nan_to_num(experiment_params.at[idx, "throttle front right"])
@@ -119,7 +118,8 @@ def set_throttle(experiment_params, idx):
         ramp_interval=0.25,
     )
     print(f"Dront Motor Throttles FR: {throttle_fr} FL: {throttle_fl} BR: {throttle_br} BL: {throttle_bl}")
-          
+
+# Check if a specific row has valid data or not to be overwritten
 def does_row_have_data(experiment_params, idx):
     """Check if there is data in the spreadsheet at row idx.
     
@@ -218,6 +218,7 @@ def does_row_have_data(experiment_params, idx):
         has_valid_data = False
     return has_valid_data 
 
+# Record the motor data to the spreadsheet
 def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
     """Record motor data to spreadsheet at row idx
 
@@ -320,7 +321,7 @@ def save_rpm_in_dataframe(experiment_params, idx, avg_rpm, std_dev_rpm):
         _compute_prop_frequency(std_dev_rpm[:, 0], experiment_params, idx)
     )
 
-
+# calculate the propeller frequency from the number of props and motor RPM
 def _compute_prop_frequency(motor_rpm, experiment_params, idx):
     """Covert motor rpm into propeller frequency.
 
@@ -384,6 +385,7 @@ def _compute_prop_frequency(motor_rpm, experiment_params, idx):
 
     return prop_frequency
 
+# Set the tilt angle for the pan tilt controller holding the drones
 def set_tilt_angle(pan_tilt, experiment_params, idx):
     # Check for faults and clear any that exist
     hard_faults, soft_faults = pan_tilt.check_for_faults(pan_tilt.get_status())
@@ -394,6 +396,7 @@ def set_tilt_angle(pan_tilt, experiment_params, idx):
     print(experiment_params.at[idx, "tilt angle"])
     pan_tilt.move_absolute(0, experiment_params.at[idx, "tilt angle"])
 
+# Create the name of the h5 file for structured storage of data
 def create_h5_filename(experiment_params, idx, filename_prefix):
     """Creates the filename for the h5 file
     
@@ -469,6 +472,7 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
 
     return filename
 
+# Prompt the user for the length of the lens tube
 def prompt_for_lens_tube_distance():
     """Prompts the user for the length of the lens tube
     
@@ -493,6 +497,7 @@ def prompt_for_lens_tube_distance():
 
     return lens_tube_distance
 
+# Save the h5 file with all of the data
 def save_h5_file(h5_filename, data_dir, experiment_params, idx, 
                  data, timestamps, capture_time, avg_rpm, rpm_std_dev, 
                  digitizer, is_data_in_volts, distance):
@@ -626,6 +631,8 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
         h5file["parameters/lens_tube_extension"] = experiment_params.at[idx, "lens tube extension distance"]
         h5file["parameters/target_distance"] = experiment_params.at[idx, "distance (m)"]
 
+# Save a png of the image seen by the LIDAR
+# TODO: Save a PNG of the frequency spectrum as well
 def save_png(data, timestamps, filename, data_dir):
     plt.pcolormesh(data)
 
