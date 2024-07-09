@@ -8,6 +8,8 @@ import h5py
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from rich.progress import track
+from scipy.fft import fft
 
 import motor_control.motor_control as motor_control
 from quickset_pan_tilt import controller, protocol
@@ -37,6 +39,7 @@ def setup_pan_tilt_controller(port):
 def setup_drone_controller(port):
     motor_control.connect(port)
     motor_control.arm()
+    motor_control.set_throttle([0,0,0,0])
 
 # Start threads for collecting rpm data from the drone
 def setup_rpm_collection_process():
@@ -117,7 +120,7 @@ def set_throttle(experiment_params, idx):
         ],
         ramp_interval=0.25,
     )
-    print(f"Dront Motor Throttles FR: {throttle_fr} FL: {throttle_fl} BR: {throttle_br} BL: {throttle_bl}")
+    print(f"Drone Motor Throttles FR: {throttle_fr} FL: {throttle_fl} BR: {throttle_br} BL: {throttle_bl}")
 
 # Check if a specific row has valid data or not to be overwritten
 def does_row_have_data(experiment_params, idx):
@@ -483,7 +486,7 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
     if isinstance(experiment_params.at[idx, 'throttle back left'], int):
         throttle_bl = f"-bl-{experiment_params.at[idx, 'throttle back left']}"
 
-    timestamp = f"{time.strftime('%H-%M-%S')}"
+    timestamp = f"{time.strftime('%H-%M-%S-')}"
 
     if filename_prefix is None:
         filename_prefix = ""
@@ -658,6 +661,9 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
 # Save a png of the image seen by the LIDAR
 # TODO: Save a PNG of the frequency spectrum as well
 def save_png(data, timestamps, filename, data_dir):
+    """Save PNGs of the image seen by the lidar
+    
+    """
     plt.pcolormesh(data)
 
     plt.xticks(ticks=range(0,len(timestamps),256),labels=np.round(timestamps[0:2048:256]/1e6,1),rotation=45)
@@ -668,8 +674,23 @@ def save_png(data, timestamps, filename, data_dir):
     # plt.gca().invert_yaxis()
     plt.ylabel('range bin')
 
-    plt.savefig(data_dir + os.sep + filename + '.png')
+    plt.savefig(data_dir + os.sep + filename + 'time-domain.png')
+    plt.close()
+    
+def save_spectrograms(data, timestamps, filename, data_dir):
+    
+    rows = np.arange(115,124)
+    for i in range(len(rows)):
+        plt.subplot(int(len(rows)/3),int(len(rows)/3),i+1,)
+        plt.title(f'range bin {rows[i]}')
+        plt.xlabel('time (ms)')
+        plt.ylabel('freqs')
+        plt.specgram(data[rows[i],:],NFFT=256,noverlap=128,Fs=1*np.e**9,)
+        plt.colorbar()
 
+    plt.savefig(data_dir + os.sep + filename + 'frequency-domain.png')
+    plt.close()
+    
 
 def main(
     experiment_spreadsheet_path,
@@ -683,25 +704,26 @@ def main(
     N_MOTORS = 4
 
     experiment_params = pd.read_excel(experiment_spreadsheet_path, dtype=object)
+    n_experiments = len(experiment_params)
 
     pan_tilt_port, drone_port = load_port_configuration(serial_port_config)
 
-    print("---------------------------------")
-    print("setting up pan tilt mount...")
+    print("--------------------------------------------")
+    print("Setting up pan tilt mount:")
     pan_tilt = setup_pan_tilt_controller(pan_tilt_port)
-    print("---------------------------------")
+    print("--------------------------------------------")
 
 
-    print("setting up drone motor control...")
+    print("Setting up drone motor control:")
     setup_drone_controller(drone_port)
-    print("---------------------------------")
+    print("--------------------------------------------")
     collect_rpm, experiment_active, telemetry_stable, rpm_recv_pipe, rpm_collection_process = (
         setup_rpm_collection_process()
     )
 
-    print("setting up digitizer...")
+    print("Setting up digitizer:")
     digitizer = setup_digitizer(digitizer_config)
-    print("---------------------------------")
+    print("--------------------------------------------")
 
     # Read in ground-truth / experiment parameter spreadsheet so we have the
     # experiment parameters we need, i.e., motor speed, tilt angle, etc.
@@ -722,24 +744,30 @@ def main(
     # we could make a new process for every image, that would not be efficient.
     experiment_active.set()
 
+    # motor_control.set_throttle([60,60,60,60])
+    # time.sleep(20)
+
 
     lens_tube_distance = prompt_for_lens_tube_distance()            
 
     try:
-        for idx, params in experiment_params.iterrows():
+        for idx in range(n_experiments):
             
             # Skip the current parameter set if the spreadsheet already has
             # data recorded for the current and next 2 rows.
-            has_data = [False, False, False]
-            for i in range(3):
-                has_data[i] = does_row_have_data(experiment_params, idx+i)
-            if has_data[0] and has_data[1] and has_data[2]:
-                print(f"has data, Continuing to row {idx + 1}")
+            # has_data = [False, False, False]
+            # for i in range(3):
+            #     has_data[i] = does_row_have_data(experiment_params, idx+i)
+            has_data = does_row_have_data(experiment_params,idx)
+            if has_data:#[0] and has_data[1] and has_data[2]:
+                print(f"Row {idx} has data, Continuing to row {idx + 1}")
                 continue
 
             experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
 
             if is_manual_adjustment_needed(experiment_params, idx):
+
+                motor_control.set_throttle([0,0,0,0])
 
                 lens_tube_distance = prompt_for_lens_tube_distance()            
                 experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
@@ -750,14 +778,14 @@ def main(
                         'Press "y" when you are ready to run the next configuration: '
                     )
 
-            print("setting throttle")
+            print("--------------------------------------------")
+            print(f"Setting throttles:")
             set_throttle(experiment_params, idx)
-            print("---------------------------------")
+            print("--------------------------------------------")
 
-            print("---------------------------------")
-            print("setting tilt angle")
+            print("Setting tilt angle:")
             set_tilt_angle(pan_tilt, experiment_params, idx)
-            print("---------------------------------")
+            print("--------------------------------------------")
 
             n_images = int(experiment_params.at[idx, "# images"])
 
@@ -770,15 +798,13 @@ def main(
 
             telemetry_stable.clear()
 
-            print("---------------------------------")
-            print("collecting data")
-            print("---------------------------------")
+            print("Collecting data:")
             for image_num in range(n_images):
 
                 # Tell the process to start collecting rpm telemetry
-                collect_rpm.set()
+                # collect_rpm.set()
 
-                telemetry_stable.wait()
+                # telemetry_stable.wait()
 
                 # Collect the lidar data
                 (
@@ -788,13 +814,14 @@ def main(
                 ) = digitizer.capture()
 
                 # We're done collecting data, so stop collecting rpm telemetry
-                collect_rpm.clear()
+                # collect_rpm.clear()
 
                 # Get the average rpm values
                 (avg_rpm[image_num, :], std_dev_rpm[image_num, :]) = rpm_recv_pipe.recv()
                 print_rpm = []
                 for i in avg_rpm[image_num, :]: print_rpm.append(int(i))
-                print(f"Image collected: {image_num}, \tRPM: {print_rpm}")
+                print_rpm = [print_rpm[3],print_rpm[1],print_rpm[2],print_rpm[0]]
+                print(f"Image collected: {image_num},\tRPM: {print_rpm}")
 
 
             # Put the ground-truth rpm data into the dataframe
@@ -806,7 +833,7 @@ def main(
 
             # If a range calibration file was given, convert range bins into meters
             if range_calibration_config:
-                rangecal.load_configuration(range_calibration_config)
+                rangecal.load_calibration(range_calibration_config)
 
                 range_bins = np.arange(n_samples)
                 distance = rangecal.compute_range(range_bins)
@@ -821,7 +848,7 @@ def main(
             )
 
             save_png(data[15,:,:], timestamps[15,:], h5_filename, data_dir)
-
+            save_spectrograms(data[15,:,:], timestamps[15,:], h5_filename, data_dir) 
             # Put the data filename in the ground-truth dataframe
             experiment_params.at[idx, "filename"] = h5_filename
 
@@ -835,6 +862,13 @@ def main(
 
         # Stop the rpm collection process
         rpm_collection_process.join()
+
+        # save spreadsheet
+        experiment_params.to_excel(experiment_spreadsheet_path, index=False)
+
+        motor_control.set_throttle([0,0,0,0])
+
+        pan_tilt.home()
 
     except KeyboardInterrupt:
         # The experiment is over; tell the rpm collection process that it can
