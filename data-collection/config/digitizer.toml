@@ -69,7 +69,7 @@ range = 2000
 # TODO: determine if there having a DC offset is useful; if the PMT truly can't
 # output positive current/voltage values, then we could add a -1000 mV offset to
 # make then input range -2 V to 0 V
-dc_offset = 0
+dc_offset = -1000
 
 # The input channels have 50 Ohm input impedance, and are DC-coupled. Since
 # these options are not software-selectable, we don't support those options,
