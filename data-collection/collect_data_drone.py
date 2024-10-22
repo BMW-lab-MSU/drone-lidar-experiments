@@ -534,9 +534,10 @@ def prompt_for_lens_tube_distance():
             print("Invalid lens tube distance. Please enter a number")
 
     return lens_tube_distance
+
 # Save the h5 file with all of the data
 def save_h5_file(h5_filename, data_dir, experiment_params, idx, 
-                 avg_rpm, rpm_std_dev, distance):
+                 avg_rpm, rpm_std_dev):
     """Define the structure of the h5 file for experiment information
 
     This function creates the h5 file for storing all the information related to
@@ -583,11 +584,6 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
                 }
         idx:
             The row index in the spreadsheet to access the data at for this function
-        data:
-             
-        timestamps:
-
-        capture_time:
 
         avg_rpm:
             This data contains the information recieved from the drone, serving as
@@ -608,12 +604,38 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
                 [Back Right],
                 [Front Right]
             }
-        distance:
-            How far away the drone is in meters.
+
     """
     os.makedirs(data_dir, exist_ok=True)
 
     with h5py.File(data_dir + os.sep + h5_filename + ".hdf5", "w") as h5file:
+        h5file.create_group("parameters/motor_rpm/front_right")
+        h5file.create_group("parameters/motor_rpm/front_left")
+        h5file.create_group("parameters/motor_rpm/back_right")
+        h5file.create_group("parameters/motor_rpm/back_left")
+
+        h5file["parameters/motor_rpm/front_right/avg"] = avg_rpm[:,3]
+        h5file["parameters/motor_rpm/front_right/std_dev"] = rpm_std_dev[:,3]
+        h5file["parameters/motor_rpm/front_left/avg"] = avg_rpm[:,1]
+        h5file["parameters/motor_rpm/front_left/std_dev"] = rpm_std_dev[:,1]
+        h5file["parameters/motor_rpm/back_right/avg"] = avg_rpm[:,2]
+        h5file["parameters/motor_rpm/back_right/std_dev"] = rpm_std_dev[:,2]
+        h5file["parameters/motor_rpm/back_left/avg"] = avg_rpm[:,0]
+        h5file["parameters/motor_rpm/back_left/std_dev"] = rpm_std_dev[:,0]
+
+        h5file.create_group("parameters/prop_frequency/front_right")
+        h5file.create_group("parameters/prop_frequency/front_left")
+        h5file.create_group("parameters/prop_frequency/back_right")
+        h5file.create_group("parameters/prop_frequency/back_left")
+
+        h5file["parameters/prop_frequency/front_right/avg"] = _compute_prop_frequency(avg_rpm[:,3], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_right/std_dev"] =_compute_prop_frequency(rpm_std_dev[:,3], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_left/avg"] = _compute_prop_frequency(avg_rpm[:,1], experiment_params, idx)
+        h5file["parameters/prop_frequency/front_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,1], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_right/avg"] = _compute_prop_frequency(avg_rpm[:,2], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_right/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,2], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_left/avg"] = _compute_prop_frequency(avg_rpm[:,0], experiment_params, idx)
+        h5file["parameters/prop_frequency/back_left/std_dev"] = _compute_prop_frequency(rpm_std_dev[:,0], experiment_params, idx)
 
         h5file.create_group("parameters/throttle")
 
@@ -621,7 +643,6 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
         throttle_fl = experiment_params.at[idx, "throttle front left"]
         throttle_br = experiment_params.at[idx, "throttle back right"]
         throttle_bl = experiment_params.at[idx, "throttle back left"]
-        
         h5file["parameters/throttle/front_right"] = throttle_fr
         h5file["parameters/throttle/front_left"] = throttle_fl
         h5file["parameters/throttle/back_right"] = throttle_br
@@ -632,7 +653,9 @@ def save_h5_file(h5_filename, data_dir, experiment_params, idx,
         h5file["parameters/prop_size"] = experiment_params.at[idx, "prop size"]
         h5file["parameters/n_blades"] = experiment_params.at[idx, "# blades"]
         h5file["parameters/fill_factor"] = experiment_params.at[idx, "fill factor"]
+        h5file["parameters/lens_tube_extension"] = experiment_params.at[idx, "lens tube extension distance"]
         h5file["parameters/target_distance"] = experiment_params.at[idx, "distance (m)"]
+
 
 
 def main(
@@ -702,7 +725,7 @@ def main(
 
                 motor_control.set_throttle([0,0,0,0])
 
-                lens_tube_distance = prompt_for_distance()
+                lens_tube_distance = prompt_for_lens_tube_distance()
                 drone_distance = prompt_for_distance()
                 experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
                 experiment_params.at[idx, "distance [m]"] = drone_distance     
@@ -729,6 +752,13 @@ def main(
 
             telemetry_stable.clear()
 
+            collection_answer = "n"
+            while collection_answer.lower() != "y":
+                collection_answer = input(
+                    'Press "y" to Collect Data: '
+                )
+                if collection_answer.lower() == "q":
+                    return
             print("Collecting data:")
             for image_num in range(n_images):
 
