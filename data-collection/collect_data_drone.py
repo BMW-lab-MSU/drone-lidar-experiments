@@ -458,7 +458,7 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
 
     """
     tilt_angle = f"tilt-{experiment_params.at[idx, 'tilt angle']}"
-    distance = f"-{experiment_params.at[idx, 'distance [m]']}m"
+    distance = f"-{experiment_params.at[idx, 'distance (m)']}m"
 
     throttle_fr = ""
     throttle_fl = ""
@@ -719,7 +719,7 @@ def main(
                 continue
 
             experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
-            experiment_params.at[idx, "distance [m]"] = drone_distance
+            experiment_params.at[idx, "distance (m)"] = drone_distance
 
             if is_manual_adjustment_needed(experiment_params, idx):
 
@@ -728,7 +728,7 @@ def main(
                 lens_tube_distance = prompt_for_lens_tube_distance()
                 drone_distance = prompt_for_distance()
                 experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
-                experiment_params.at[idx, "distance [m]"] = drone_distance     
+                experiment_params.at[idx, "distance (m)"] = drone_distance     
 
                 answer = "n"
                 while answer.lower() != "y":
@@ -753,9 +753,9 @@ def main(
             telemetry_stable.clear()
 
             collection_answer = "n"
-            while collection_answer.lower() != "y":
+            while collection_answer.lower() != "y" and collection_answer != "":
                 collection_answer = input(
-                    'Press "y" to Collect Data: '
+                    'Press "y" or "Enter" to Collect Data: '
                 )
                 if collection_answer.lower() == "q":
                     return
@@ -766,7 +766,7 @@ def main(
                 collect_rpm.set()
 
                 telemetry_stable.wait()
-
+                time.sleep(1)
                 # We're done collecting data, so stop collecting rpm telemetry
                 collect_rpm.clear()
 

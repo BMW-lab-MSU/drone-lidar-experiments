@@ -114,7 +114,7 @@ def does_row_have_data(experiment_params, idx):
     """
     has_data = False
 
-    curr_distance = experiment_params.at[idx+0, "distance [m]"]
+    curr_distance = experiment_params.at[idx+0, "distance (m)"]
 
     if (isinstance(curr_distance,str)):
         has_data = True
@@ -172,7 +172,7 @@ def create_h5_filename(experiment_params, idx, filename_prefix):
 
     """
     tilt_angle = f"tilt-{experiment_params.at[idx, 'tilt angle']}"
-    distance = f"-{experiment_params.at[idx, 'distance [m]']}m"
+    distance = f"-{experiment_params.at[idx, 'distance (m)']}m"
 
     throttle_fr = ""
     throttle_fl = ""
@@ -370,6 +370,10 @@ def save_png(data, timestamps, filename, data_dir):
     # because that's how MATLAB does it :)
     # plt.gca().invert_yaxis()
     plt.ylabel('range bin')
+    try:
+        os.mkdir(data_dir + os.sep + 'images')
+    except:
+        pass
 
     plt.savefig(data_dir + os.sep + 'images' + os.sep + filename + 'time-domain.png')
     plt.close()
@@ -384,6 +388,11 @@ def save_spectrograms(data, timestamps, filename, data_dir):
         plt.ylabel('freqs')
         plt.specgram(data[rows[i],:],NFFT=256,noverlap=128,Fs=1*np.e**9,)
         plt.colorbar()
+
+    try:
+        os.mkdir(data_dir + os.sep + 'images')
+    except:
+        pass
 
     plt.savefig(data_dir + os.sep + 'images' + os.sep + filename + 'frequency-domain.png')
     plt.close()
@@ -433,14 +442,14 @@ def main(
                 continue
 
             experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
-            experiment_params.at[idx, "distance [m]"] = drone_distance
+            experiment_params.at[idx, "distance (m)"] = drone_distance
             
             if is_manual_adjustment_needed(experiment_params, idx):
 
                 lens_tube_distance = prompt_for_lens_tube_distance()
                 drone_distance = prompt_for_distance()
                 experiment_params.at[idx, "lens tube extension distance"] = lens_tube_distance
-                experiment_params.at[idx, "distance [m]"] = drone_distance  
+                experiment_params.at[idx, "distance (m)"] = drone_distance  
                 
                 answer = "n"
                 while answer.lower() != "y":
@@ -455,9 +464,9 @@ def main(
             capture_time = np.empty(shape=n_images, dtype=np.bytes_)
 
             collection_answer = "n"
-            while collection_answer.lower() != "y":
+            while collection_answer.lower() != "y" and collection_answer != "":
                 collection_answer = input(
-                    'Press "y" to Collect Data: '
+                    'Press "y" or "Enter" to Collect Data: '
                 )
                 if collection_answer.lower() == "q":
                     return
@@ -470,6 +479,8 @@ def main(
                     timestamps[image_num, :],
                     capture_time[image_num],
                 ) = digitizer.capture()
+                time.sleep(0.1)
+                print(f"Image collected: {image_num}")
 
             if use_volts:
                 data = digitizer.convert_to_volts(data)
