@@ -200,7 +200,9 @@ def collect_rpm_data(collect_rpm, run_main_loop, telemetry_stable, pipe):
             telemetry_stable.set()
 
         while collect_rpm.is_set():
-            
+            if not run_main_loop.is_set():
+                pipe.send((avg_rpm, rpm_std_dev))
+                return
             current_packet = get_rpm_telemetry()
 
             if current_packet is not None:
