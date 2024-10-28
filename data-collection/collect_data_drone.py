@@ -766,7 +766,7 @@ def main(
                 collect_rpm.set()
 
                 telemetry_stable.wait()
-                time.sleep(1)
+                time.sleep(0.5)
                 # We're done collecting data, so stop collecting rpm telemetry
                 collect_rpm.clear()
 
