@@ -32,7 +32,7 @@ def detect_fundamental_frequency(fft_magnitude, sampling_freq):
     fft_magnitude = filtfilt(b, a, fft_magnitude)
     
     # Find peaks in the FFT magnitude
-    peaks, properties = find_peaks(fft_magnitude, prominence=0.8, height=0.1* np.max(fft_magnitude))
+    peaks, properties = find_peaks(fft_magnitude, prominence=0.7, height=0.1* np.max(fft_magnitude))
     heights = properties['peak_heights']
     peak_frequencies = peaks * (nyquist_freq / len(fft_magnitude))
     margin = 10  # Margin to consider for peak detection in Hz
@@ -49,23 +49,66 @@ def detect_fundamental_frequency(fft_magnitude, sampling_freq):
     elif len(peak_frequencies) > 1:
         # Iterate through the peaks to find the fundamental frequency
         for i in range(len(peak_frequencies)):
+            P1 = peak_frequencies[i]
+            # Calculate the harmonics of P1
+            # H0 is the fundamental frequency, H1 is the first harmonic, H2 is the second harmonic, and H3 is the third harmonic
+            H0 = P1
+            H1 = P1 * 2
+            H2 = P1 * 3
+            H3 = P1 * 4
+            # Calculate the possibly Aliased harmonics of P1
+            A1 = (2 * nyquist_freq) - (2 * P1)
+            A2 = (3 * nyquist_freq) - (3 * P1)
+            A3 = (4 * nyquist_freq) - (4 * P1)
+
             for j in range(len(peak_frequencies)):
-                P1 = peak_frequencies[i]
+                if i == j:
+                    continue
                 P2 = peak_frequencies[j]
-                P2_imaginary = nyquist_freq + (nyquist_freq - P2)
-                P1_predicted = P2_imaginary/2
-                if abs(P1 - P2*2) < margin:
-                    normal_harmonics.append(P2)
-                if abs(P1 - P1_predicted) < margin:
-                    aliased_harmonics.append(P2_imaginary - P1)
-        print(f"Normal harmonics: {normal_harmonics}, Aliased harmonics: {aliased_harmonics}")
+
+                # Check if P2 is a harmonic of P1
+                if abs(P2 - H1) < margin:
+                    normal_harmonics.append(H0)
+                if abs(P2 - H2) < margin:
+                    normal_harmonics.append(H0)
+                if abs(P2 - H3) < margin:
+                    normal_harmonics.append(H0)
+                    
+                # Check if P2 is an aliased harmonic of P1
+                if abs(P2 - A1) < margin:
+                    aliased_harmonics.append(H0)
+                if abs(P2 - A2) < margin:
+                    aliased_harmonics.append(H0)
+                if abs(P2 - A3) < margin:
+                    aliased_harmonics.append(H0)
+
+                # P2_imaginary = nyquist_freq + (nyquist_freq - P2)
+                # P1_predicted = P2_imaginary/2
+                # if abs(P1 - P2*2) < margin:
+                #     normal_harmonics.append(P2)
+                # if abs(P1 - P1_predicted) < margin:
+                #     aliased_harmonics.append(P2_imaginary - P1)
+        # print(f"Normal harmonics: {normal_harmonics}, Aliased harmonics: {aliased_harmonics}")
+
+        # Find the mode of the normal harmonics
+        mode_normal_harmonics = max(set(normal_harmonics), key=normal_harmonics.count) if normal_harmonics else 0
+        mode_aliased_harmonics = max(set(aliased_harmonics), key=aliased_harmonics.count) if aliased_harmonics else 0
+        # print(f"Normal harmonics Mode: {mode_normal_harmonics}, Aliased harmonics Mode: {mode_aliased_harmonics}")
+
         if len(normal_harmonics) > 0 or len(aliased_harmonics) > 0:
-            # Determine which set of harmonics is more relevant to determine the fundamental frequency
-            if len(normal_harmonics) > len(aliased_harmonics):
-                # If there are more normal harmonics, return the first one
+            # Find how many times the mode appears in each list
+            normal_count = normal_harmonics.count(mode_normal_harmonics)
+            aliased_count = aliased_harmonics.count(mode_aliased_harmonics)
+            if normal_count > aliased_count:
+                return mode_normal_harmonics
+            elif aliased_count > normal_count:
+                return mode_aliased_harmonics
+
+            if len(normal_harmonics) == len(aliased_harmonics):
+                return peak_frequencies[0]  # If both lists are of equal length, return the first peak frequency
+            elif len(normal_harmonics) > len(aliased_harmonics):
                 return normal_harmonics[0]
             elif len(aliased_harmonics) > len(normal_harmonics):
-                # If there are more aliased harmonics, return the first one
                 return aliased_harmonics[0]
         return peak_frequencies[0]  # No valid fundamental frequency found
     return 0
@@ -125,7 +168,8 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                           'fft Detected freq', 
                           'Peaks Detected freq difference', 
                           'Peaks Detected freq 1st value',
-                          'My Detected freq'
+                          'My Detected freq',
+                          'Distance',
                          ])
     
     # Process each file
@@ -137,7 +181,7 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                 freqSeen = row['frequencySeen'] # Yes or No
                 
                 # If the freqSeen is 'yes', then calculate the statistics from the raw data
-                if freqSeen == 'yes':# or freqSeen == 'maybe' or freqSeen == 'no':
+                if freqSeen == 'yes' or freqSeen == 'maybe' or freqSeen == 'no':
                     # Open the h5 file
                     h5File = h5py.File(folderPath + fileName, 'r')
                     print(f"Processing file: {fileName}")
@@ -154,6 +198,8 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                     prop_freq_back_right = prop_freq['back_right']
                     prop_freq_front_left = prop_freq['front_left']
                     prop_freq_front_right = prop_freq['front_right']
+                    # Convert the distance to a float
+                    distance = np.float16(np.array(h5Params['target_distance']))
                     
                     bl_avg = np.array(prop_freq_back_left['avg'])
                     bl_std = np.array(prop_freq_back_left['std_dev'])
@@ -163,6 +209,7 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                     fl_std = np.array(prop_freq_front_left['std_dev'])
                     fr_avg = np.array(prop_freq_front_right['avg'])
                     fr_std = np.array(prop_freq_front_right['std_dev'])
+
                     
                     # Initialize variables to track the strongest freq across all rows for the current image
                     strongest_freq_index = None
@@ -255,31 +302,31 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                     detected_freq_myfft = detect_fundamental_frequency(best_freq_row, sampling_freq)
                     
                     # Plot the results
-                    plt.figure(num=1, figsize=(12, 6))
-                    plt.plot(range(len(best_freq_row)) * scaling_factor, best_freq_row, label='Row Data')
-                    plt.title(f"FFT Magnitude for Image {best_image_index}, Range Bin {best_freq_row_index}")
-                    plt.xlabel('freq Bin')
-                    plt.ylabel('Magnitude')
+                    # plt.figure(num=1, figsize=(12, 6))
+                    # plt.plot(range(len(best_freq_row)) * scaling_factor, best_freq_row, label='Row Data')
+                    # plt.title(f"FFT Magnitude for Image {best_image_index}, Range Bin {best_freq_row_index}")
+                    # plt.xlabel('freq Bin')
+                    # plt.ylabel('Magnitude')
                 
                     # Smooth the best frequency row to reduce noise
-                    nyquistRate = 0.5 * sampling_freq
-                    order = 4  # Order of the filter
+                    # nyquistRate = 0.5 * sampling_freq
+                    # order = 4  # Order of the filter
                     
-                    plt.axvline(detected_freq_fft, color='r', linestyle='-', label='fft')
-                    plt.axvline(detected_freq_f0, color='g', linestyle='--', label='f0')
-                    plt.axvline(detected_freq_peaks_diff, color='b', linestyle='--', label='detected peaks differences')
-                    plt.axvline(detected_freq_peaks_1, color='orange', linestyle='--', label='detected peaks 1st value')
-                    plt.axvline(detected_freq_peaks_2, color='purple', linestyle='--', label='detected peaks 2nd value')
-                    plt.axvline(detected_freq_myfft, color='cyan', linestyle='--', label='My Detected Freq')
-                    plt.axvline(prop_freq_front_right['avg'][current_index], color='black', linestyle='--', label='Front Right Avg')
-                    plt.axvline(prop_freq_front_left['avg'][current_index], color='black', linestyle='--', label='Front Left Avg')
-                    plt.axvline(prop_freq_back_right['avg'][current_index], color='black', linestyle='--', label='Back Right Avg')
-                    plt.axvline(prop_freq_back_left['avg'][current_index], color='black', linestyle='--', label='Back Left Avg')
-                    plt.legend()
-                    plt.grid()
-                    plt.show()
+                    # plt.axvline(detected_freq_fft, color='r', linestyle='-', label='fft')
+                    # plt.axvline(detected_freq_f0, color='g', linestyle='--', label='f0')
+                    # plt.axvline(detected_freq_peaks_diff, color='b', linestyle='--', label='detected peaks differences')
+                    # plt.axvline(detected_freq_peaks_1, color='orange', linestyle='--', label='detected peaks 1st value')
+                    # plt.axvline(detected_freq_peaks_2, color='purple', linestyle='--', label='detected peaks 2nd value')
+                    # plt.axvline(detected_freq_myfft, color='cyan', linestyle='--', label='My Detected Freq')
+                    # plt.axvline(prop_freq_front_right['avg'][current_index], color='black', linestyle='--', label='Front Right Avg')
+                    # plt.axvline(prop_freq_front_left['avg'][current_index], color='black', linestyle='--', label='Front Left Avg')
+                    # plt.axvline(prop_freq_back_right['avg'][current_index], color='black', linestyle='--', label='Back Right Avg')
+                    # plt.axvline(prop_freq_back_left['avg'][current_index], color='black', linestyle='--', label='Back Left Avg')
+                    # plt.legend()
+                    # plt.grid()
+                    # plt.show()
                     
-                    input("Press Enter to continue...")
+                    # input("Press Enter to continue...")
                     
                     # Map propeller names to their corresponding indices in avgs
                     avgs = (
@@ -376,6 +423,7 @@ with open(output_csv_path, mode='w', newline='') as output_file:
                         f"{detected_freq_peaks_1}",
                         f"{detected_freq_peaks_diff}",
                         f"{detected_freq_myfft}",
+                        f"{distance}",
                     ])
                 
 print(f"Percentage of times within confidence interval: {percentage_within_confidence:.2f}%")
